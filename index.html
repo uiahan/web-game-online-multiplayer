@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TicTacToe Online</title>
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #111;
+  color: white;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  gap: 10px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+button {
+  width: 100px;
+  height: 100px;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+#status {
+  margin-top: 20px;
+}
+</style>
+</head>
+<body>
+
+<h1>TicTacToe Online</h1>
+<p id="status">Loading...</p>
+<div id="board"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const SUPABASE_URL = "https://vgqzzmghoyfhwukksbzv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ZZmh_NNgicmaPLY2HXO2yw_am3UB8h4";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let roomId = new URLSearchParams(window.location.search).get("room");
+let player = null;
+
+const boardDiv = document.getElementById("board");
+const statusText = document.getElementById("status");
+
+function renderBoard(board) {
+  boardDiv.innerHTML = "";
+  board.split("").forEach((cell, i) => {
+    const btn = document.createElement("button");
+    btn.innerText = cell === "-" ? "" : cell;
+    btn.onclick = () => makeMove(i);
+    boardDiv.appendChild(btn);
+  });
+}
+
+function checkWinner(board) {
+  const win = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  for (let combo of win) {
+    const [a,b,c] = combo;
+    if (board[a] !== "-" && board[a] === board[b] && board[a] === board[c]) {
+      return board[a];
+    }
+  }
+
+  if (!board.includes("-")) return "draw";
+  return null;
+}
+
+async function createRoom() {
+  const { data } = await supabase.from("rooms").insert({
+    board: "---------",
+    turn: "X",
+    player_x: null,
+    player_o: null
+  }).select().single();
+
+  window.location.href = "?room=" + data.id;
+}
+
+async function joinRoom() {
+  const { data: room } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
+
+  if (!room.player_x) {
+    player = "X";
+    localStorage.setItem("player", player);
+    await supabase.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
+  } else if (!room.player_o) {
+    player = "O";
+    localStorage.setItem("player", player);
+    await supabase.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
+  } else {
+    player = localStorage.getItem("player");
+  }
+}
+
+async function makeMove(index) {
+  const { data: room } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
+
+  if (room.turn !== player) return;
+
+  let board = room.board.split("");
+
+  if (board[index] !== "-") return;
+
+  board[index] = player;
+
+  const winner = checkWinner(board.join(""));
+
+  await supabase.from("rooms").update({
+    board: board.join(""),
+    turn: player === "X" ? "O" : "X"
+  }).eq("id", roomId);
+
+  if (winner) {
+    setTimeout(() => {
+      alert(winner === "draw" ? "Draw!" : winner + " menang!");
+    }, 300);
+  }
+}
+
+function updateUI(room) {
+  renderBoard(room.board);
+
+  if (!room.player_x || !room.player_o) {
+    statusText.innerText = "Menunggu player lain...";
+  } else {
+    statusText.innerText = "Giliran: " + room.turn;
+  }
+}
+
+async function init() {
+  if (!roomId) {
+    await createRoom();
+    return;
+  }
+
+  await joinRoom();
+
+  const { data: room } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
+
+  updateUI(room);
+
+  supabase
+    .channel("room-" + roomId)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+      payload => {
+        updateUI(payload.new);
+      }
+    )
+    .subscribe();
+}
+
+init();
+</script>
+
+</body>
+</html>
