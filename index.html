@@ -122,14 +122,47 @@ h1 {
   margin: 0;
 }
 
-#status {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
 #roleInfo {
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(214, 197, 176, 0.72);
+  background: rgba(248, 241, 232, 0.95);
+  box-shadow: 0 10px 20px rgba(112, 92, 74, 0.08);
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.status-strip #statusText {
+  line-height: 1.35;
+}
+
+.status-strip.state-waiting {
+  border-color: rgba(199, 109, 93, 0.55);
+  background: rgba(252, 236, 232, 0.98);
+}
+
+.status-strip.state-opponent-turn {
+  border-color: rgba(199, 109, 93, 0.75);
+  background: rgba(250, 230, 225, 0.98);
+}
+
+.status-strip.state-my-turn {
+  border-color: rgba(73, 132, 83, 0.65);
+  background: rgba(235, 246, 232, 0.98);
+}
+
+.status-strip.state-finished {
+  border-color: rgba(162, 196, 217, 0.72);
+  background: rgba(238, 244, 248, 0.98);
 }
 
 .top-actions {
@@ -189,38 +222,12 @@ h1 {
   border-radius: 24px;
   border: 1px solid rgba(214, 197, 176, 0.9);
   background: var(--panel-soft);
-  padding: 12px;
+  padding: 10px;
   min-height: 0;
   flex: 1 1 auto;
   overflow: visible;
   display: grid;
-  gap: 10px;
-  grid-template-rows: auto minmax(0, 1fr);
   animation: riseIn 0.5s ease both;
-}
-
-.board-overlay {
-  z-index: 2;
-  display: grid;
-  gap: 6px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(248, 241, 232, 0.95);
-  border: 1px solid rgba(214, 197, 176, 0.72);
-  box-shadow: 0 10px 20px rgba(112, 92, 74, 0.1);
-  pointer-events: none;
-}
-
-.board-overlay #status {
-  font-size: clamp(0.94rem, 2.6vw, 1rem);
-  line-height: 1.4;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.board-overlay #roleInfo {
-  font-size: clamp(0.85rem, 2.3vw, 0.92rem);
 }
 
 .status-icon {
@@ -315,7 +322,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: clamp(6px, 1.3vw, 10px);
+  gap: clamp(4px, 1.1vw, 8px);
   margin-top: 0;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -433,16 +440,19 @@ h1 {
   }
 
   .board-shell {
-    padding: 10px;
+    padding: 8px;
     min-height: 0;
   }
 
   #board {
-    gap: 4px;
+    gap: 3px;
   }
 
-  .board-overlay {
-    padding: 10px 12px;
+  .status-strip {
+    margin-top: 10px;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+    flex-wrap: wrap;
   }
 
   .cell {
@@ -533,11 +543,13 @@ h1 {
     </div>
   </div>
 
+  <div class="status-strip" id="statusStrip">
+    <span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span>
+    <span id="statusText">Loading...</span>
+    <span id="roleInfo">Kamu: -</span>
+  </div>
+
   <section class="board-shell state-waiting" id="statusCard">
-    <div class="board-overlay">
-      <p id="status"><span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span><span id="statusText">Loading...</span></p>
-      <p id="roleInfo">Kamu: -</p>
-    </div>
     <div id="board" aria-label="TicTacToe board"></div>
   </section>
 </main>
@@ -547,7 +559,8 @@ h1 {
     <h2 id="gameModalTitle" class="game-modal-title">Game selesai</h2>
     <p id="gameModalText" class="game-modal-text">-</p>
     <div class="game-modal-actions">
-      <button id="gameModalCloseBtn" class="action-btn" type="button">Tutup</button>
+      <button id="gameModalRematchBtn" class="action-btn" type="button">Main Lagi</button>
+      <button id="gameModalCloseBtn" class="action-btn" type="button">Tidak</button>
     </div>
   </div>
 </div>
@@ -566,19 +579,21 @@ let roomId = new URLSearchParams(window.location.search).get("room");
 let player = null;
 let currentRoom = null;
 let lastAnnouncedResult = "";
+let lastModalKey = "";
 let syncTimer = null;
 
 const boardDiv = document.getElementById("board");
-const statusText = document.getElementById("status");
 const statusMessage = document.getElementById("statusText");
 const statusIcon = document.getElementById("statusIcon");
 const roomInfo = document.getElementById("roomInfoText");
 const roomInfoPill = document.getElementById("roomInfo");
 const roleInfo = document.getElementById("roleInfo");
+const statusStrip = document.getElementById("statusStrip");
 const statusCard = document.getElementById("statusCard");
 const shareWhatsAppBtn = document.getElementById("shareWhatsAppBtn");
 const gameModal = document.getElementById("gameModal");
 const gameModalText = document.getElementById("gameModalText");
+const gameModalRematchBtn = document.getElementById("gameModalRematchBtn");
 const gameModalCloseBtn = document.getElementById("gameModalCloseBtn");
 
 function getWinner(board) {
@@ -621,6 +636,10 @@ function getOutcomeKey(room, winner) {
   return `${room.id}:${room.board}:${room.turn}:${winner}`;
 }
 
+function isRoomOwner() {
+  return player === "X";
+}
+
 function shortRoomCode(roomIdValue) {
   if (!roomIdValue) return "-";
   if (roomIdValue.length <= 8) return roomIdValue;
@@ -634,18 +653,30 @@ function announceOutcome(room, winner) {
   if (lastAnnouncedResult === outcomeKey) return;
 
   lastAnnouncedResult = outcomeKey;
+  const canRematch = isRoomOwner();
   const message = winner === "draw"
-    ? "Permainan berakhir seri."
-    : `${winner} keluar sebagai pemenang.`;
+    ? (canRematch
+      ? "Permainan berakhir seri. Main lagi?"
+      : "Permainan berakhir seri. Menunggu pemilik room memilih main lagi atau tidak.")
+    : (canRematch
+      ? `${winner} keluar sebagai pemenang. Main lagi?`
+      : `${winner} menang. Menunggu pemilik room memilih main lagi atau tidak.`);
 
-  openOutcomeModal(winner === "draw" ? "Hasil seri" : "Selamat", message);
+  openOutcomeModal(room, winner, winner === "draw" ? "Hasil seri" : "Selamat", message);
 }
 
-function openOutcomeModal(title, message) {
+function openOutcomeModal(room, winner, title, message) {
   document.getElementById("gameModalTitle").innerText = title;
   gameModalText.innerText = message;
   gameModal.classList.add("is-open");
   gameModal.setAttribute("aria-hidden", "false");
+
+  const modalKey = getOutcomeKey(room, winner);
+  lastModalKey = modalKey;
+
+  const canRematch = isRoomOwner();
+  gameModalRematchBtn.style.display = canRematch ? "inline-flex" : "none";
+  gameModalCloseBtn.innerText = canRematch ? "Tidak" : "Tutup";
 }
 
 function closeOutcomeModal() {
@@ -674,6 +705,8 @@ async function joinRoom() {
   if (error || !room) {
     statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
     statusIcon.innerText = "!";
+    statusStrip.className = "status-strip state-opponent-turn";
+    statusStrip.classList.add("state-opponent-turn");
     roleInfo.innerText = "Kamu belum masuk ke room.";
     roomInfo.innerText = "Room: -";
     roomInfoPill.title = "Room: -";
@@ -695,6 +728,49 @@ async function joinRoom() {
   return true;
 }
 
+async function resetRoom() {
+  if (!currentRoom || !isRoomOwner()) return;
+
+  const { error } = await client
+    .from("rooms")
+    .update({
+      board: "---------",
+      turn: "X"
+    })
+    .eq("id", roomId);
+
+  if (!error) {
+    lastAnnouncedResult = "";
+    lastModalKey = "";
+    closeOutcomeModal();
+    await refreshRoom();
+  }
+}
+
+function getStatusTextForRoom(room, winner) {
+  if (winner === "draw") {
+    return "Permainan selesai, hasilnya seri.";
+  }
+
+  if (winner) {
+    return winner === player ? "Kamu menang!" : `Pemenang: ${winner}`;
+  }
+
+  if (!room.player_x || !room.player_o) {
+    if (!room.player_x && !room.player_o) {
+      return "Menunggu pemain pertama.";
+    }
+
+    return "Menunggu satu pemain lagi.";
+  }
+
+  if (!player) {
+    return "Kamu sedang menonton permainan ini.";
+  }
+
+  return room.turn === player ? `Giliran kamu sebagai ${player}.` : `Giliran ${room.turn}.`;
+}
+
 function renderRoom(room) {
   currentRoom = room;
 
@@ -707,52 +783,35 @@ function renderRoom(room) {
   roleInfo.innerText = player ? `Kamu bermain sebagai ${player}` : "Kamu sedang menonton";
 
   statusCard.classList.remove("state-waiting", "state-my-turn", "state-opponent-turn", "state-finished");
+  statusStrip.classList.remove("state-waiting", "state-my-turn", "state-opponent-turn", "state-finished");
 
   if (winner) {
     statusCard.classList.add("state-finished");
+    statusStrip.classList.add("state-finished");
     statusIcon.innerText = "✓";
   } else if (!room.player_x || !room.player_o) {
     statusCard.classList.add("state-waiting");
+    statusStrip.classList.add("state-waiting");
     statusIcon.innerText = "⌛";
   } else if (player && room.turn === player) {
     statusCard.classList.add("state-my-turn");
+    statusStrip.classList.add("state-my-turn");
     statusIcon.innerText = "●";
   } else {
     statusCard.classList.add("state-opponent-turn");
+    statusStrip.classList.add("state-opponent-turn");
     statusIcon.innerText = "•";
   }
 
-  announceOutcome(room, winner);
-
-  if (winner === "draw") {
-    statusMessage.innerText = "Permainan selesai, hasilnya seri.";
-    return;
-  }
-
-  if (winner) {
-    statusMessage.innerText = winner === player ? "Kamu menang!" : `Pemenang: ${winner}`;
-    return;
-  }
-
-  if (!room.player_x || !room.player_o) {
-    if (!room.player_x && !room.player_o) {
-      statusMessage.innerText = "Menunggu pemain pertama.";
-    } else {
-      statusMessage.innerText = "Menunggu satu pemain lagi.";
+  if (!winner) {
+    lastModalKey = "";
+    if (gameModal.classList.contains("is-open")) {
+      closeOutcomeModal();
     }
-    return;
   }
 
-  if (!player) {
-    statusMessage.innerText = "Kamu sedang menonton permainan ini.";
-    return;
-  }
-
-  if (room.turn === player) {
-    statusMessage.innerText = `Giliran kamu sebagai ${player}.`;
-  } else {
-    statusMessage.innerText = `Giliran ${room.turn}.`;
-  }
+  announceOutcome(room, winner);
+  statusMessage.innerText = getStatusTextForRoom(room, winner);
 }
 
 async function refreshRoom() {
@@ -849,29 +908,10 @@ async function init() {
   });
 
   client
-    .channel("room-" + roomId)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
-      payload => {
-        if (payload.new) {
-          updateUI(payload.new);
+
+      if (!winner) {
+        lastModalKey = "";
+        if (gameModal.classList.contains("is-open")) {
+          closeOutcomeModal();
         }
       }
-    )
-    .subscribe();
-}
-
-shareWhatsAppBtn.addEventListener("click", shareRoomToWhatsApp);
-gameModalCloseBtn.addEventListener("click", closeOutcomeModal);
-gameModal.addEventListener("click", event => {
-  if (event.target === gameModal) {
-    closeOutcomeModal();
-  }
-});
-
-init();
-</script>
-
-</body>
-</html>
