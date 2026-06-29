@@ -42,7 +42,10 @@ button {
 const SUPABASE_URL = "https://vgqzzmghoyfhwukksbzv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ZZmh_NNgicmaPLY2HXO2yw_am3UB8h4";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const client = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
 let roomId = new URLSearchParams(window.location.search).get("room");
 let player = null;
@@ -79,7 +82,7 @@ function checkWinner(board) {
 }
 
 async function createRoom() {
-  const { data } = await supabase.from("rooms").insert({
+  const { data } = await client.from("rooms").insert({
     board: "---------",
     turn: "X",
     player_x: null,
@@ -90,7 +93,7 @@ async function createRoom() {
 }
 
 async function joinRoom() {
-  const { data: room } = await supabase
+  const { data: room } = await client
     .from("rooms")
     .select("*")
     .eq("id", roomId)
@@ -99,18 +102,18 @@ async function joinRoom() {
   if (!room.player_x) {
     player = "X";
     localStorage.setItem("player", player);
-    await supabase.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
+    await client.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
   } else if (!room.player_o) {
     player = "O";
     localStorage.setItem("player", player);
-    await supabase.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
+    await client.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
   } else {
     player = localStorage.getItem("player");
   }
 }
 
 async function makeMove(index) {
-  const { data: room } = await supabase
+  const { data: room } = await client
     .from("rooms")
     .select("*")
     .eq("id", roomId)
@@ -126,7 +129,7 @@ async function makeMove(index) {
 
   const winner = checkWinner(board.join(""));
 
-  await supabase.from("rooms").update({
+  await client.from("rooms").update({
     board: board.join(""),
     turn: player === "X" ? "O" : "X"
   }).eq("id", roomId);
@@ -156,7 +159,7 @@ async function init() {
 
   await joinRoom();
 
-  const { data: room } = await supabase
+  const { data: room } = await client
     .from("rooms")
     .select("*")
     .eq("id", roomId)
@@ -164,7 +167,7 @@ async function init() {
 
   updateUI(room);
 
-  supabase
+  client
     .channel("room-" + roomId)
     .on(
       "postgres_changes",
