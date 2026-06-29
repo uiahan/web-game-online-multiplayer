@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TicTacToe Online</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicTacToe Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+    <style>
 :root {
   --bg: #c9d3dd;
   --panel: #f8f1e8;
@@ -528,44 +530,52 @@ h1 {
   }
 }
 </style>
-</head>
-<body>
+  </head>
+  <body>
 
-<main class="app-shell">
-  <div class="topbar">
-    <div class="topbar-copy">
-      <h1><span class="title-icon" aria-hidden="true">✦</span><span>TicTacToe Online</span></h1>
-      <p class="subtitle">Buat room, bagikan link, lalu main bareng secara realtime.</p>
+    <main class="app-shell">
+      <div class="topbar">
+        <div class="topbar-copy">
+          <h1><span class="title-icon"
+              aria-hidden="true">✦</span><span>TicTacToe Online</span></h1>
+          <p class="subtitle">Buat room, bagikan link, lalu main bareng secara
+            realtime.</p>
+        </div>
+        <div class="top-actions">
+          <p id="roomInfo" class="pill" title="Room: -"><span class="pill-icon"
+              aria-hidden="true">◌</span><span id="roomInfoText">Room:
+              -</span></p>
+          <button id="shareWhatsAppBtn" class="action-btn" type="button"><span
+              class="button-icon" aria-hidden="true">↗</span><span>Bagikan ke
+              WhatsApp</span></button>
+        </div>
+      </div>
+
+      <div class="status-strip" id="statusStrip">
+        <span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span>
+        <span id="statusText">Loading...</span>
+        <span id="roleInfo">Kamu: -</span>
+      </div>
+
+      <section class="board-shell state-waiting" id="statusCard">
+        <div id="board" aria-label="TicTacToe board"></div>
+      </section>
+    </main>
+
+    <div id="gameModal" class="game-modal" aria-hidden="true">
+      <div class="game-modal-card" role="dialog" aria-modal="true"
+        aria-labelledby="gameModalTitle">
+        <h2 id="gameModalTitle" class="game-modal-title">Game selesai</h2>
+        <p id="gameModalText" class="game-modal-text">-</p>
+        <div class="game-modal-actions">
+          <button id="gameModalCloseBtn" class="action-btn"
+            type="button">Tutup</button>
+        </div>
+      </div>
     </div>
-    <div class="top-actions">
-      <p id="roomInfo" class="pill" title="Room: -"><span class="pill-icon" aria-hidden="true">◌</span><span id="roomInfoText">Room: -</span></p>
-      <button id="shareWhatsAppBtn" class="action-btn" type="button"><span class="button-icon" aria-hidden="true">↗</span><span>Bagikan ke WhatsApp</span></button>
-    </div>
-  </div>
 
-  <div class="status-strip" id="statusStrip">
-    <span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span>
-    <span id="statusText">Loading...</span>
-    <span id="roleInfo">Kamu: -</span>
-  </div>
-
-  <section class="board-shell state-waiting" id="statusCard">
-    <div id="board" aria-label="TicTacToe board"></div>
-  </section>
-</main>
-
-<div id="gameModal" class="game-modal" aria-hidden="true">
-  <div class="game-modal-card" role="dialog" aria-modal="true" aria-labelledby="gameModalTitle">
-    <h2 id="gameModalTitle" class="game-modal-title">Game selesai</h2>
-    <p id="gameModalText" class="game-modal-text">-</p>
-    <div class="game-modal-actions">
-      <button id="gameModalCloseBtn" class="action-btn" type="button">Tutup</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
 const SUPABASE_URL = "https://vgqzzmghoyfhwukksbzv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ZZmh_NNgicmaPLY2HXO2yw_am3UB8h4";
 
@@ -646,11 +656,43 @@ function announceOutcome(room, winner) {
   if (lastAnnouncedResult === outcomeKey) return;
 
   lastAnnouncedResult = outcomeKey;
+
   const message = winner === "draw"
     ? "Permainan berakhir seri."
     : `${winner} keluar sebagai pemenang.`;
 
-  openOutcomeModal(winner === "draw" ? "Hasil seri" : "Selamat", message);
+  openOutcomeModal(
+    winner === "draw" ? "Hasil seri" : "Selamat",
+    message
+  );
+
+  // ⏳ Countdown
+  let countdown = 10;
+  gameModalText.innerText = `${message} (Reset dalam ${countdown}s)`;
+
+  const interval = setInterval(() => {
+    countdown--;
+
+    gameModalText.innerText = `${message} (Reset dalam ${countdown}s)`;
+
+    if (countdown <= 0) {
+      clearInterval(interval);
+    }
+  }, 1000);
+
+  let resetTimeout = null;
+
+  // ⏳ Reset setelah 10 detik
+ resetTimeout = setTimeout(() => {
+  resetGame();
+}, 10000);
+
+  // Jika modal ditutup sebelum reset, batalkan reset
+  gameModalCloseBtn.onclick = () => {
+    clearTimeout(resetTimeout);
+    clearInterval(interval);
+    closeOutcomeModal();
+  };
 }
 
 function openOutcomeModal(title, message) {
@@ -881,6 +923,18 @@ async function init() {
     .subscribe();
 }
 
+async function resetGame() {
+  if (!roomId) return;
+
+  await client.from("rooms").update({
+    board: "---------",
+    turn: "X"
+  }).eq("id", roomId);
+
+  closeOutcomeModal();
+  lastAnnouncedResult = "";
+}
+
 shareWhatsAppBtn.addEventListener("click", shareRoomToWhatsApp);
 gameModalCloseBtn.addEventListener("click", closeOutcomeModal);
 gameModal.addEventListener("click", event => {
@@ -892,5 +946,5 @@ gameModal.addEventListener("click", event => {
 init();
 </script>
 
-</body>
+  </body>
 </html>
