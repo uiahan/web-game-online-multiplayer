@@ -542,6 +542,9 @@ h1 {
             realtime.</p>
         </div>
         <div class="top-actions">
+          <button id="createRoomBtn" class="action-btn" type="button"><span
+            class="button-icon" aria-hidden="true">＋</span><span>Buat
+            Room</span></button>
           <p id="roomInfo" class="pill" title="Room: -"><span class="pill-icon"
               aria-hidden="true">◌</span><span id="roomInfoText">Room:
               -</span></p>
@@ -552,9 +555,9 @@ h1 {
       </div>
 
       <div class="status-strip" id="statusStrip">
-        <span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span>
-        <span id="statusText">Loading...</span>
-        <span id="roleInfo">Kamu: -</span>
+        <span id="statusIcon" class="status-icon" aria-hidden="true">＋</span>
+        <span id="statusText">Klik Buat Room untuk mulai.</span>
+        <span id="roleInfo">Belum ada room aktif.</span>
       </div>
 
       <section class="board-shell state-waiting" id="statusCard">
@@ -601,11 +604,20 @@ const roomInfoPill = document.getElementById("roomInfo");
 const roleInfo = document.getElementById("roleInfo");
 const statusStrip = document.getElementById("statusStrip");
 const statusCard = document.getElementById("statusCard");
+const createRoomBtn = document.getElementById("createRoomBtn");
 const shareWhatsAppBtn = document.getElementById("shareWhatsAppBtn");
 const gameModal = document.getElementById("gameModal");
 const gameModalText = document.getElementById("gameModalText");
 const gameModalRematchBtn = document.getElementById("gameModalRematchBtn");
 const gameModalCloseBtn = document.getElementById("gameModalCloseBtn");
+
+if (!roomId) {
+  statusMessage.innerText = "Klik Buat Room untuk mulai.";
+  statusIcon.innerText = "＋";
+  roleInfo.innerText = "Belum ada room aktif.";
+  roomInfo.innerText = "Room: -";
+  roomInfoPill.title = "Room: -";
+}
 
 function getWinner(board) {
   return checkWinner(board);
@@ -696,47 +708,75 @@ function closeOutcomeModal() {
 }
 
 async function createRoom() {
-  const { data } = await client.from("rooms").insert({
-    board: "---------",
-    turn: "X",
-    player_x: null,
-    player_o: null
-  }).select().single();
+  try {
+    const { data, error } = await client
+      .from("rooms")
+      .insert({
+        board: "---------",
+        turn: "X",
+        player_x: null,
+        player_o: null
+      })
+      .select()
+      .maybeSingle();
 
-  window.location.href = "?room=" + data.id;
+    if (error || !data) {
+      throw error || new Error("Unable to create room");
+    }
+
+    window.location.href = "?room=" + data.id;
+    return true;
+  } catch (error) {
+    console.error("createRoom failed", error);
+    statusMessage.innerText = "Gagal membuat room. Coba refresh atau cek koneksi Supabase.";
+    statusIcon.innerText = "!";
+    statusStrip.className = "status-strip state-opponent-turn";
+    roleInfo.innerText = "Room belum bisa dibuat.";
+    return false;
+  }
 }
 
 async function joinRoom() {
-  const { data: room, error } = await client
-    .from("rooms")
-    .select("*")
-    .eq("id", roomId)
-    .single();
+  try {
+    const { data: room, error } = await client
+      .from("rooms")
+      .select("*")
+      .eq("id", roomId)
+      .maybeSingle();
 
-  if (error || !room) {
-    statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
+    if (error || !room) {
+      statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
+      statusIcon.innerText = "!";
+      statusStrip.className = "status-strip state-opponent-turn";
+      roleInfo.innerText = "Kamu belum masuk ke room.";
+      roomInfo.innerText = "Room: -";
+      roomInfoPill.title = "Room: -";
+      return false;
+    }
+
+    if (!room.player_x) {
+      player = "X";
+      localStorage.setItem("player", player);
+      await client.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
+    } else if (!room.player_o) {
+      player = "O";
+      localStorage.setItem("player", player);
+      await client.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
+    } else {
+      player = localStorage.getItem("player");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("joinRoom failed", error);
+    statusMessage.innerText = "Gagal masuk room. Coba refresh atau cek koneksi Supabase.";
     statusIcon.innerText = "!";
     statusStrip.className = "status-strip state-opponent-turn";
-    statusStrip.classList.add("state-opponent-turn");
-    roleInfo.innerText = "Kamu belum masuk ke room.";
+    roleInfo.innerText = "Kamu belum bisa masuk room.";
     roomInfo.innerText = "Room: -";
     roomInfoPill.title = "Room: -";
     return false;
   }
-
-  if (!room.player_x) {
-    player = "X";
-    localStorage.setItem("player", player);
-    await client.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
-  } else if (!room.player_o) {
-    player = "O";
-    localStorage.setItem("player", player);
-    await client.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
-  } else {
-    player = localStorage.getItem("player");
-  }
-
-  return true;
 }
 
 async function resetRoom() {
@@ -899,7 +939,11 @@ function updateUI(room) {
 
 async function init() {
   if (!roomId) {
-    await createRoom();
+    statusMessage.innerText = "Klik Buat Room untuk mulai.";
+    statusIcon.innerText = "＋";
+    roleInfo.innerText = "Belum ada room aktif.";
+    roomInfo.innerText = "Room: -";
+    roomInfoPill.title = "Room: -";
     return;
   }
 
@@ -917,13 +961,16 @@ async function init() {
       refreshRoom();
     }
   });
+}
+  createRoomBtn.addEventListener("click", createRoom);
 
-  client
+shareWhatsAppBtn.addEventListener("click", shareRoomToWhatsApp);
+gameModalRematchBtn.addEventListener("click", resetRoom);
+gameModalCloseBtn.addEventListener("click", closeOutcomeModal);
+gameModal.addEventListener("click", event => {
+  if (event.target === gameModal) {
+    closeOutcomeModal();
+  }
+});
 
-      if (!winner) {
-        lastModalKey = "";
-        if (gameModal.classList.contains("is-open")) {
-          closeOutcomeModal();
-        }
-      }
-    }
+init();
