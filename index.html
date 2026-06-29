@@ -559,8 +559,7 @@ h1 {
     <h2 id="gameModalTitle" class="game-modal-title">Game selesai</h2>
     <p id="gameModalText" class="game-modal-text">-</p>
     <div class="game-modal-actions">
-      <button id="gameModalRematchBtn" class="action-btn" type="button">Main Lagi</button>
-      <button id="gameModalCloseBtn" class="action-btn" type="button">Tidak</button>
+      <button id="gameModalCloseBtn" class="action-btn" type="button">Tutup</button>
     </div>
   </div>
 </div>
@@ -579,7 +578,6 @@ let roomId = new URLSearchParams(window.location.search).get("room");
 let player = null;
 let currentRoom = null;
 let lastAnnouncedResult = "";
-let lastModalKey = "";
 let syncTimer = null;
 
 const boardDiv = document.getElementById("board");
@@ -593,7 +591,6 @@ const statusCard = document.getElementById("statusCard");
 const shareWhatsAppBtn = document.getElementById("shareWhatsAppBtn");
 const gameModal = document.getElementById("gameModal");
 const gameModalText = document.getElementById("gameModalText");
-const gameModalRematchBtn = document.getElementById("gameModalRematchBtn");
 const gameModalCloseBtn = document.getElementById("gameModalCloseBtn");
 
 function getWinner(board) {
@@ -636,10 +633,6 @@ function getOutcomeKey(room, winner) {
   return `${room.id}:${room.board}:${room.turn}:${winner}`;
 }
 
-function isRoomOwner() {
-  return player === "X";
-}
-
 function shortRoomCode(roomIdValue) {
   if (!roomIdValue) return "-";
   if (roomIdValue.length <= 8) return roomIdValue;
@@ -657,22 +650,14 @@ function announceOutcome(room, winner) {
     ? "Permainan berakhir seri."
     : `${winner} keluar sebagai pemenang.`;
 
-  openOutcomeModal(room, winner, winner === "draw" ? "Hasil seri" : "Selamat", message);
+  openOutcomeModal(winner === "draw" ? "Hasil seri" : "Selamat", message);
 }
 
-function openOutcomeModal(room, winner, title, message) {
+function openOutcomeModal(title, message) {
   document.getElementById("gameModalTitle").innerText = title;
   gameModalText.innerText = message;
   gameModal.classList.add("is-open");
   gameModal.setAttribute("aria-hidden", "false");
-
-  const modalKey = getOutcomeKey(room, winner);
-  if (lastModalKey === modalKey) return;
-  lastModalKey = modalKey;
-
-  const canRematch = isRoomOwner();
-  gameModalRematchBtn.style.display = canRematch ? "inline-flex" : "none";
-  gameModalCloseBtn.innerText = canRematch ? "Tidak" : "Tutup";
 }
 
 function closeOutcomeModal() {
@@ -724,49 +709,6 @@ async function joinRoom() {
   return true;
 }
 
-async function resetRoom() {
-  if (!currentRoom || !isRoomOwner()) return;
-
-  const { error } = await client
-    .from("rooms")
-    .update({
-      board: "---------",
-      turn: "X"
-    })
-    .eq("id", roomId);
-
-  if (!error) {
-    lastAnnouncedResult = "";
-    lastModalKey = "";
-    closeOutcomeModal();
-    await refreshRoom();
-  }
-}
-
-function getStatusTextForRoom(room, winner) {
-  if (winner === "draw") {
-    return "Permainan selesai, hasilnya seri.";
-  }
-
-  if (winner) {
-    return winner === player ? "Kamu menang!" : `Pemenang: ${winner}`;
-  }
-
-  if (!room.player_x || !room.player_o) {
-    if (!room.player_x && !room.player_o) {
-      return "Menunggu pemain pertama.";
-    }
-
-    return "Menunggu satu pemain lagi.";
-  }
-
-  if (!player) {
-    return "Kamu sedang menonton permainan ini.";
-  }
-
-  return room.turn === player ? `Giliran kamu sebagai ${player}.` : `Giliran ${room.turn}.`;
-}
-
 function renderRoom(room) {
   currentRoom = room;
 
@@ -799,37 +741,37 @@ function renderRoom(room) {
     statusIcon.innerText = "•";
   }
 
-  const winner = getWinner(room.board);
-  const modalKey = getOutcomeKey(room, winner);
-  const canPromptRematch = !!winner && isRoomOwner();
+  announceOutcome(room, winner);
 
-  if (!winner) {
-    lastModalKey = "";
-    if (gameModal.classList.contains("is-open")) {
-      closeOutcomeModal();
-    }
-  } else if (canPromptRematch && lastModalKey !== modalKey) {
-    openOutcomeModal(
-      room,
-      winner,
-      winner === "draw" ? "Hasil seri" : "Selamat",
-      winner === "draw"
-        ? "Permainan berakhir seri."
-        : `${winner} keluar sebagai pemenang. Main lagi?`
-    );
-  } else if (!canPromptRematch && gameModal.classList.contains("is-open") && lastModalKey !== modalKey) {
-    openOutcomeModal(
-      room,
-      winner,
-      winner === "draw" ? "Hasil seri" : "Game selesai",
-      winner === "draw"
-        ? "Permainan berakhir seri. Menunggu pemilik room memilih main lagi atau tidak."
-        : `${winner} menang. Menunggu pemilik room memilih main lagi atau tidak.`
-    );
+  if (winner === "draw") {
+    statusMessage.innerText = "Permainan selesai, hasilnya seri.";
+    return;
   }
 
-  announceOutcome(room, winner);
-  statusMessage.innerText = getStatusTextForRoom(room, winner);
+  if (winner) {
+    statusMessage.innerText = winner === player ? "Kamu menang!" : `Pemenang: ${winner}`;
+    return;
+  }
+
+  if (!room.player_x || !room.player_o) {
+    if (!room.player_x && !room.player_o) {
+      statusMessage.innerText = "Menunggu pemain pertama.";
+    } else {
+      statusMessage.innerText = "Menunggu satu pemain lagi.";
+    }
+    return;
+  }
+
+  if (!player) {
+    statusMessage.innerText = "Kamu sedang menonton permainan ini.";
+    return;
+  }
+
+  if (room.turn === player) {
+    statusMessage.innerText = `Giliran kamu sebagai ${player}.`;
+  } else {
+    statusMessage.innerText = `Giliran ${room.turn}.`;
+  }
 }
 
 async function refreshRoom() {
@@ -940,7 +882,6 @@ async function init() {
 }
 
 shareWhatsAppBtn.addEventListener("click", shareRoomToWhatsApp);
-gameModalRematchBtn.addEventListener("click", resetRoom);
 gameModalCloseBtn.addEventListener("click", closeOutcomeModal);
 gameModal.addEventListener("click", event => {
   if (event.target === gameModal) {
