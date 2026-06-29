@@ -38,19 +38,25 @@ body {
   background: var(--bg);
   display: grid;
   place-items: center;
-  padding: 32px 16px;
+  min-height: 100svh;
+  padding: clamp(10px, 2.4vw, 24px);
   position: relative;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .app-shell {
-  width: min(92vw, 520px);
+  width: min(100%, 560px);
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 28px;
-  padding: 28px;
+  padding: clamp(16px, 3vw, 26px);
   box-shadow: 0 22px 55px var(--shadow);
   position: relative;
+  display: grid;
+  gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100svh - 24px);
+  animation: cardEnter 0.6s ease both;
 }
 
 .app-shell::after {
@@ -62,41 +68,54 @@ body {
   pointer-events: none;
 }
 
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin: 0 0 10px;
-}
-
 h1 {
   margin: 0;
   font-family: "Fraunces", Georgia, serif;
-  font-size: clamp(2rem, 5vw, 3rem);
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
   line-height: 1;
   color: #85664f;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-icon,
+.pill-icon,
+.button-icon,
+.status-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(174, 140, 111, 0.16);
+  color: #85664f;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.title-icon {
+  background: var(--panel-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .subtitle {
-  margin: 10px 0 20px;
+  margin: 8px 0 0;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.status-row {
+.topbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 12px;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 18px;
 }
 
-.status-stack {
-  display: grid;
-  gap: 6px;
-  flex: 1 1 220px;
+.topbar-copy {
+  min-width: 0;
 }
 
 #status, #roomInfo, #roleInfo {
@@ -113,21 +132,12 @@ h1 {
   font-size: 0.92rem;
 }
 
-.waiting-card {
-  margin-bottom: 18px;
-  padding: 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(214, 197, 176, 0.85);
-  background: var(--panel-soft);
-}
-
-.waiting-card .status-stack {
-  margin-bottom: 12px;
-}
-
-.waiting-card.is-waiting {
-  border-color: rgba(162, 196, 217, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+.top-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .pill {
@@ -142,13 +152,7 @@ h1 {
   border: 1px solid rgba(174, 140, 111, 0.18);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
   align-self: start;
-}
-
-.room-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
+  animation: popIn 0.4s ease both;
 }
 
 .action-btn {
@@ -163,6 +167,10 @@ h1 {
   cursor: pointer;
   box-shadow: 0 8px 16px rgba(112, 92, 74, 0.08);
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  animation: popIn 0.45s ease both;
 }
 
 .action-btn:hover:not(:disabled) {
@@ -176,11 +184,139 @@ h1 {
   opacity: 0.55;
 }
 
+.board-shell {
+  position: relative;
+  border-radius: 24px;
+  border: 1px solid rgba(214, 197, 176, 0.9);
+  background: var(--panel-soft);
+  padding: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  animation: riseIn 0.5s ease both;
+}
+
+.board-overlay {
+  position: absolute;
+  inset: 12px 12px auto 12px;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(248, 241, 232, 0.95);
+  border: 1px solid rgba(214, 197, 176, 0.72);
+  box-shadow: 0 10px 20px rgba(112, 92, 74, 0.1);
+}
+
+.board-overlay #status {
+  font-size: clamp(0.94rem, 2.6vw, 1rem);
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-overlay #roleInfo {
+  font-size: clamp(0.85rem, 2.3vw, 0.92rem);
+}
+
+.status-icon {
+  background: #f4ece1;
+  color: #85664f;
+  border-color: rgba(174, 140, 111, 0.18);
+  animation: pulseSoft 1.8s ease-in-out infinite;
+}
+
+.board-shell.state-waiting {
+  border-color: rgba(199, 109, 93, 0.55);
+}
+
+.board-shell.state-waiting::before,
+.board-shell.state-opponent-turn::before,
+.board-shell.state-my-turn::before,
+.board-shell.state-finished::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  pointer-events: none;
+}
+
+.board-shell.state-waiting::before {
+  background: rgba(199, 109, 93, 0.08);
+}
+
+.board-shell.state-waiting .board-overlay,
+.board-shell.state-opponent-turn .board-overlay {
+  border-color: rgba(199, 109, 93, 0.35);
+  background: rgba(253, 241, 238, 0.98);
+}
+
+.board-shell.state-opponent-turn {
+  border-color: rgba(199, 109, 93, 0.58);
+}
+
+.board-shell.state-opponent-turn::before {
+  background: rgba(199, 109, 93, 0.08);
+}
+
+.board-shell.state-my-turn {
+  border-color: rgba(113, 154, 120, 0.55);
+}
+
+.board-shell.state-my-turn::before {
+  background: rgba(113, 154, 120, 0.08);
+}
+
+.board-shell.state-my-turn .board-overlay {
+  border-color: rgba(113, 154, 120, 0.3);
+  background: rgba(241, 248, 239, 0.98);
+}
+
+.board-shell.state-my-turn .cell:not(:disabled) {
+  border-color: rgba(113, 154, 120, 0.55);
+  background: #edf6eb;
+  box-shadow: 0 12px 20px rgba(113, 154, 120, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.board-shell.state-my-turn .cell:not(:disabled):hover {
+  border-color: rgba(98, 144, 103, 0.82);
+  background: #e2f0de;
+}
+
+.board-shell.state-finished {
+  border-color: rgba(162, 196, 217, 0.72);
+}
+
+.board-shell.state-finished::before {
+  background: rgba(162, 196, 217, 0.08);
+}
+
+.board-shell.state-my-turn .status-icon {
+  background: #e7f1e4;
+  color: #5f8a67;
+}
+
+.board-shell.state-opponent-turn .status-icon,
+.board-shell.state-waiting .status-icon {
+  background: #f8e7e4;
+  color: #b76556;
+}
+
+.board-shell.state-finished .status-icon {
+  background: #e4eef5;
+  color: #67869d;
+}
+
 #board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 0;
+  width: 100%;
+  height: 100%;
+  align-content: stretch;
 }
 
 .cell {
@@ -239,6 +375,7 @@ h1 {
   box-shadow: 0 26px 60px rgba(112, 92, 74, 0.2);
   padding: 22px;
   text-align: center;
+  animation: modalPop 0.4s ease both;
 }
 
 .game-modal-title {
@@ -267,18 +404,110 @@ h1 {
 
 @media (max-width: 480px) {
   .app-shell {
-    padding: 22px 16px;
+    padding: 14px;
     border-radius: 22px;
+    max-height: calc(100svh - 16px);
+    width: min(100%, calc(100vw - 16px));
   }
 
-  .status-row {
+  .topbar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
-  .pill {
+  .top-actions {
+    justify-content: stretch;
+  }
+
+  .top-actions .pill,
+  .top-actions .action-btn {
     width: 100%;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .board-shell {
+    padding: 10px;
+    min-height: clamp(360px, 64svh, 520px);
+  }
+
+  .board-overlay {
+    inset: 10px 10px auto 10px;
+    padding: 10px 12px;
+  }
+
+  .cell {
+    border-radius: 16px;
+  }
+
+  h1 {
     justify-content: center;
+    text-align: center;
+  }
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulseSoft {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(133, 102, 79, 0.0);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 5px rgba(133, 102, 79, 0.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }
 </style>
@@ -286,22 +515,24 @@ h1 {
 <body>
 
 <main class="app-shell">
-  <h1 style="text-align: center;">TicTacToe Online</h1>
-
-  <div class="waiting-card" id="statusCard">
-    <div class="status-row">
-      <div class="status-stack">
-      <p id="status">Loading...</p>
-      <p id="roleInfo">Kamu: -</p>
-      </div>
-      <p id="roomInfo" class="pill">Room: -</p>
+  <div class="topbar">
+    <div class="topbar-copy">
+      <h1><span class="title-icon" aria-hidden="true">✦</span><span>TicTacToe Online</span></h1>
+      <p class="subtitle">Buat room, bagikan link, lalu main bareng secara realtime.</p>
     </div>
-    <div class="room-actions">
-      <button id="shareWhatsAppBtn" class="action-btn" type="button">Bagikan ke WhatsApp</button>
+    <div class="top-actions">
+      <p id="roomInfo" class="pill"><span class="pill-icon" aria-hidden="true">◌</span><span id="roomInfoText">Room: -</span></p>
+      <button id="shareWhatsAppBtn" class="action-btn" type="button"><span class="button-icon" aria-hidden="true">↗</span><span>Bagikan ke WhatsApp</span></button>
     </div>
   </div>
 
-  <div id="board" aria-label="TicTacToe board"></div>
+  <section class="board-shell state-waiting" id="statusCard">
+    <div class="board-overlay">
+      <p id="status"><span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span><span id="statusText">Loading...</span></p>
+      <p id="roleInfo">Kamu: -</p>
+    </div>
+    <div id="board" aria-label="TicTacToe board"></div>
+  </section>
 </main>
 
 <div id="gameModal" class="game-modal" aria-hidden="true">
@@ -332,7 +563,9 @@ let syncTimer = null;
 
 const boardDiv = document.getElementById("board");
 const statusText = document.getElementById("status");
-const roomInfo = document.getElementById("roomInfo");
+const statusMessage = document.getElementById("statusText");
+const statusIcon = document.getElementById("statusIcon");
+const roomInfo = document.getElementById("roomInfoText");
 const roleInfo = document.getElementById("roleInfo");
 const statusCard = document.getElementById("statusCard");
 const shareWhatsAppBtn = document.getElementById("shareWhatsAppBtn");
@@ -351,7 +584,8 @@ function renderBoard(board, room) {
     btn.className = "cell" + (cell === "X" ? " x" : cell === "O" ? " o" : "");
     btn.innerText = cell === "-" ? "" : cell;
     btn.setAttribute("aria-label", `Cell ${i + 1}${cell === '-' ? '' : ': ' + cell}`);
-    btn.disabled = !room || !!getWinner(room.board) || room.turn !== player || cell !== "-";
+    const canPlay = !!room && !getWinner(room.board) && room.turn === player && room.player_x && room.player_o;
+    btn.disabled = !canPlay || cell !== "-";
     btn.onclick = () => makeMove(i);
     boardDiv.appendChild(btn);
   });
@@ -417,11 +651,18 @@ async function createRoom() {
 }
 
 async function joinRoom() {
-  const { data: room } = await client
+  const { data: room, error } = await client
     .from("rooms")
     .select("*")
     .eq("id", roomId)
     .single();
+
+  if (error || !room) {
+    statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
+    statusIcon.innerText = "!";
+    roleInfo.innerText = "Kamu belum masuk ke room.";
+    return false;
+  }
 
   if (!room.player_x) {
     player = "X";
@@ -434,6 +675,8 @@ async function joinRoom() {
   } else {
     player = localStorage.getItem("player");
   }
+
+  return true;
 }
 
 function renderRoom(room) {
@@ -445,38 +688,52 @@ function renderRoom(room) {
   roomInfo.innerText = `Room: ${room.id}`;
   roleInfo.innerText = player ? `Kamu bermain sebagai ${player}` : "Kamu sedang menonton";
 
-  statusCard.classList.toggle("is-waiting", !winner && (!room.player_x || !room.player_o));
+  statusCard.classList.remove("state-waiting", "state-my-turn", "state-opponent-turn", "state-finished");
+
+  if (winner) {
+    statusCard.classList.add("state-finished");
+    statusIcon.innerText = "✓";
+  } else if (!room.player_x || !room.player_o) {
+    statusCard.classList.add("state-waiting");
+    statusIcon.innerText = "⌛";
+  } else if (player && room.turn === player) {
+    statusCard.classList.add("state-my-turn");
+    statusIcon.innerText = "●";
+  } else {
+    statusCard.classList.add("state-opponent-turn");
+    statusIcon.innerText = "•";
+  }
 
   announceOutcome(room, winner);
 
   if (winner === "draw") {
-    statusText.innerText = "Permainan selesai, hasilnya seri.";
+    statusMessage.innerText = "Permainan selesai, hasilnya seri.";
     return;
   }
 
   if (winner) {
-    statusText.innerText = winner === player ? "Kamu menang!" : `Pemenang: ${winner}`;
+    statusMessage.innerText = winner === player ? "Kamu menang!" : `Pemenang: ${winner}`;
     return;
   }
 
   if (!room.player_x || !room.player_o) {
     if (!room.player_x && !room.player_o) {
-      statusText.innerText = "Menunggu pemain pertama bergabung.";
+      statusMessage.innerText = "Menunggu pemain pertama bergabung.";
     } else {
-      statusText.innerText = "Menunggu satu pemain lagi bergabung.";
+      statusMessage.innerText = "Menunggu satu pemain lagi bergabung.";
     }
     return;
   }
 
   if (!player) {
-    statusText.innerText = "Kamu sedang menonton permainan ini.";
+    statusMessage.innerText = "Kamu sedang menonton permainan ini.";
     return;
   }
 
   if (room.turn === player) {
-    statusText.innerText = `Giliran kamu sebagai ${player}.`;
+    statusMessage.innerText = `Giliran kamu sebagai ${player}. Kotak yang bisa dipencet akan berwarna hijau.`;
   } else {
-    statusText.innerText = `Sekarang giliran ${room.turn}.`;
+    statusMessage.innerText = `Sekarang giliran ${room.turn}. Papan dibuat merah sampai giliranmu datang.`;
   }
 }
 
@@ -505,6 +762,8 @@ async function makeMove(index) {
     .select("*")
     .eq("id", roomId)
     .single();
+
+  if (!room) return;
 
   if (room.turn !== player) return;
 
@@ -556,7 +815,8 @@ async function init() {
     return;
   }
 
-  await joinRoom();
+  const joined = await joinRoom();
+  if (!joined) return;
 
   await refreshRoom();
 
