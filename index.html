@@ -192,13 +192,14 @@ h1 {
   padding: 12px;
   min-height: 0;
   flex: 1 1 auto;
-  overflow: hidden;
+  overflow: visible;
+  display: grid;
+  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
   animation: riseIn 0.5s ease both;
 }
 
 .board-overlay {
-  position: absolute;
-  inset: 12px 12px auto 12px;
   z-index: 2;
   display: grid;
   gap: 6px;
@@ -207,6 +208,7 @@ h1 {
   background: rgba(248, 241, 232, 0.95);
   border: 1px solid rgba(214, 197, 176, 0.72);
   box-shadow: 0 10px 20px rgba(112, 92, 74, 0.1);
+  pointer-events: none;
 }
 
 .board-overlay #status {
@@ -223,13 +225,13 @@ h1 {
 
 .status-icon {
   background: #f4ece1;
-  color: #85664f;
+  color: #744e3d;
   border-color: rgba(174, 140, 111, 0.18);
   animation: pulseSoft 1.8s ease-in-out infinite;
 }
 
 .board-shell.state-waiting {
-  border-color: rgba(199, 109, 93, 0.55);
+  border-color: rgba(199, 109, 93, 0.88);
 }
 
 .board-shell.state-waiting::before,
@@ -244,64 +246,64 @@ h1 {
 }
 
 .board-shell.state-waiting::before {
-  background: rgba(199, 109, 93, 0.08);
+  background: rgba(199, 109, 93, 0.16);
 }
 
 .board-shell.state-waiting .board-overlay,
 .board-shell.state-opponent-turn .board-overlay {
-  border-color: rgba(199, 109, 93, 0.35);
-  background: rgba(253, 241, 238, 0.98);
+  border-color: rgba(199, 109, 93, 0.55);
+  background: rgba(252, 236, 232, 0.98);
 }
 
 .board-shell.state-opponent-turn {
-  border-color: rgba(199, 109, 93, 0.58);
+  border-color: rgba(199, 109, 93, 0.92);
 }
 
 .board-shell.state-opponent-turn::before {
-  background: rgba(199, 109, 93, 0.08);
+  background: rgba(199, 109, 93, 0.16);
 }
 
 .board-shell.state-my-turn {
-  border-color: rgba(113, 154, 120, 0.55);
+  border-color: rgba(73, 132, 83, 0.9);
 }
 
 .board-shell.state-my-turn::before {
-  background: rgba(113, 154, 120, 0.08);
+  background: rgba(73, 132, 83, 0.16);
 }
 
 .board-shell.state-my-turn .board-overlay {
-  border-color: rgba(113, 154, 120, 0.3);
-  background: rgba(241, 248, 239, 0.98);
+  border-color: rgba(73, 132, 83, 0.45);
+  background: rgba(235, 246, 232, 0.98);
 }
 
 .board-shell.state-my-turn .cell:not(:disabled) {
-  border-color: rgba(113, 154, 120, 0.55);
-  background: #edf6eb;
-  box-shadow: 0 12px 20px rgba(113, 154, 120, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  border-color: rgba(73, 132, 83, 0.82);
+  background: #d9ebd5;
+  box-shadow: 0 12px 20px rgba(73, 132, 83, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
 .board-shell.state-my-turn .cell:not(:disabled):hover {
-  border-color: rgba(98, 144, 103, 0.82);
-  background: #e2f0de;
+  border-color: rgba(62, 118, 71, 0.96);
+  background: #cfe3ca;
 }
 
 .board-shell.state-finished {
-  border-color: rgba(162, 196, 217, 0.72);
+  border-color: rgba(162, 196, 217, 0.92);
 }
 
 .board-shell.state-finished::before {
-  background: rgba(162, 196, 217, 0.08);
+  background: rgba(162, 196, 217, 0.14);
 }
 
 .board-shell.state-my-turn .status-icon {
-  background: #e7f1e4;
-  color: #5f8a67;
+  background: #d9ebd5;
+  color: #3f7446;
 }
 
 .board-shell.state-opponent-turn .status-icon,
 .board-shell.state-waiting .status-icon {
-  background: #f8e7e4;
-  color: #b76556;
+  background: #f5d8d4;
+  color: #a44639;
 }
 
 .board-shell.state-finished .status-icon {
@@ -312,11 +314,13 @@ h1 {
 #board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: clamp(6px, 1.3vw, 10px);
   margin-top: 0;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1 / 1;
   align-content: stretch;
+  align-self: stretch;
 }
 
 .cell {
@@ -430,11 +434,14 @@ h1 {
 
   .board-shell {
     padding: 10px;
-    min-height: clamp(360px, 64svh, 520px);
+    min-height: 0;
+  }
+
+  #board {
+    gap: 4px;
   }
 
   .board-overlay {
-    inset: 10px 10px auto 10px;
     padding: 10px 12px;
   }
 
@@ -521,7 +528,7 @@ h1 {
       <p class="subtitle">Buat room, bagikan link, lalu main bareng secara realtime.</p>
     </div>
     <div class="top-actions">
-      <p id="roomInfo" class="pill"><span class="pill-icon" aria-hidden="true">◌</span><span id="roomInfoText">Room: -</span></p>
+      <p id="roomInfo" class="pill" title="Room: -"><span class="pill-icon" aria-hidden="true">◌</span><span id="roomInfoText">Room: -</span></p>
       <button id="shareWhatsAppBtn" class="action-btn" type="button"><span class="button-icon" aria-hidden="true">↗</span><span>Bagikan ke WhatsApp</span></button>
     </div>
   </div>
@@ -566,6 +573,7 @@ const statusText = document.getElementById("status");
 const statusMessage = document.getElementById("statusText");
 const statusIcon = document.getElementById("statusIcon");
 const roomInfo = document.getElementById("roomInfoText");
+const roomInfoPill = document.getElementById("roomInfo");
 const roleInfo = document.getElementById("roleInfo");
 const statusCard = document.getElementById("statusCard");
 const shareWhatsAppBtn = document.getElementById("shareWhatsAppBtn");
@@ -611,6 +619,12 @@ function checkWinner(board) {
 
 function getOutcomeKey(room, winner) {
   return `${room.id}:${room.board}:${room.turn}:${winner}`;
+}
+
+function shortRoomCode(roomIdValue) {
+  if (!roomIdValue) return "-";
+  if (roomIdValue.length <= 8) return roomIdValue;
+  return `${roomIdValue.slice(0, 4)}…${roomIdValue.slice(-4)}`;
 }
 
 function announceOutcome(room, winner) {
@@ -661,6 +675,8 @@ async function joinRoom() {
     statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
     statusIcon.innerText = "!";
     roleInfo.innerText = "Kamu belum masuk ke room.";
+    roomInfo.innerText = "Room: -";
+    roomInfoPill.title = "Room: -";
     return false;
   }
 
@@ -685,7 +701,9 @@ function renderRoom(room) {
   renderBoard(room.board, room);
 
   const winner = getWinner(room.board);
-  roomInfo.innerText = `Room: ${room.id}`;
+  const shortCode = shortRoomCode(room.id);
+  roomInfo.innerText = `Room: ${shortCode}`;
+  roomInfoPill.title = `Room: ${room.id}`;
   roleInfo.innerText = player ? `Kamu bermain sebagai ${player}` : "Kamu sedang menonton";
 
   statusCard.classList.remove("state-waiting", "state-my-turn", "state-opponent-turn", "state-finished");
@@ -718,9 +736,9 @@ function renderRoom(room) {
 
   if (!room.player_x || !room.player_o) {
     if (!room.player_x && !room.player_o) {
-      statusMessage.innerText = "Menunggu pemain pertama bergabung.";
+      statusMessage.innerText = "Menunggu pemain pertama.";
     } else {
-      statusMessage.innerText = "Menunggu satu pemain lagi bergabung.";
+      statusMessage.innerText = "Menunggu satu pemain lagi.";
     }
     return;
   }
@@ -731,9 +749,9 @@ function renderRoom(room) {
   }
 
   if (room.turn === player) {
-    statusMessage.innerText = `Giliran kamu sebagai ${player}. Kotak yang bisa dipencet akan berwarna hijau.`;
+    statusMessage.innerText = `Giliran kamu sebagai ${player}.`;
   } else {
-    statusMessage.innerText = `Sekarang giliran ${room.turn}. Papan dibuat merah sampai giliranmu datang.`;
+    statusMessage.innerText = `Giliran ${room.turn}.`;
   }
 }
 
