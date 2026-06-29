@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TicTacToe Online</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet">
-    <style>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TicTacToe Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
 :root {
   --bg: #c9d3dd;
   --panel: #f8f1e8;
@@ -530,57 +528,45 @@ h1 {
   }
 }
 </style>
-  </head>
-  <body>
+</head>
+<body>
 
-    <main class="app-shell">
-      <div class="topbar">
-        <div class="topbar-copy">
-          <h1><span class="title-icon"
-              aria-hidden="true">✦</span><span>TicTacToe Online</span></h1>
-          <p class="subtitle">Buat room, bagikan link, lalu main bareng secara
-            realtime.</p>
-        </div>
-        <div class="top-actions">
-          <button id="createRoomBtn" class="action-btn" type="button"><span
-            class="button-icon" aria-hidden="true">＋</span><span>Buat
-            Room</span></button>
-          <p id="roomInfo" class="pill" title="Room: -"><span class="pill-icon"
-              aria-hidden="true">◌</span><span id="roomInfoText">Room:
-              -</span></p>
-          <button id="shareWhatsAppBtn" class="action-btn" type="button"><span
-              class="button-icon" aria-hidden="true">↗</span><span>Bagikan ke
-              WhatsApp</span></button>
-        </div>
-      </div>
-
-      <div class="status-strip" id="statusStrip">
-        <span id="statusIcon" class="status-icon" aria-hidden="true">＋</span>
-        <span id="statusText">Klik Buat Room untuk mulai.</span>
-        <span id="roleInfo">Belum ada room aktif.</span>
-      </div>
-
-      <section class="board-shell state-waiting" id="statusCard">
-        <div id="board" aria-label="TicTacToe board"></div>
-      </section>
-    </main>
-
-    <div id="gameModal" class="game-modal" aria-hidden="true">
-      <div class="game-modal-card" role="dialog" aria-modal="true"
-        aria-labelledby="gameModalTitle">
-        <h2 id="gameModalTitle" class="game-modal-title">Game selesai</h2>
-        <p id="gameModalText" class="game-modal-text">-</p>
-        <div class="game-modal-actions">
-          <button id="gameModalRematchBtn" class="action-btn" type="button">Main
-            Lagi</button>
-          <button id="gameModalCloseBtn" class="action-btn"
-            type="button">Tidak</button>
-        </div>
-      </div>
+<main class="app-shell">
+  <div class="topbar">
+    <div class="topbar-copy">
+      <h1><span class="title-icon" aria-hidden="true">✦</span><span>TicTacToe Online</span></h1>
+      <p class="subtitle">Buat room, bagikan link, lalu main bareng secara realtime.</p>
     </div>
+    <div class="top-actions">
+      <p id="roomInfo" class="pill" title="Room: -"><span class="pill-icon" aria-hidden="true">◌</span><span id="roomInfoText">Room: -</span></p>
+      <button id="shareWhatsAppBtn" class="action-btn" type="button"><span class="button-icon" aria-hidden="true">↗</span><span>Bagikan ke WhatsApp</span></button>
+    </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script>
+  <div class="status-strip" id="statusStrip">
+    <span id="statusIcon" class="status-icon" aria-hidden="true">⌛</span>
+    <span id="statusText">Loading...</span>
+    <span id="roleInfo">Kamu: -</span>
+  </div>
+
+  <section class="board-shell state-waiting" id="statusCard">
+    <div id="board" aria-label="TicTacToe board"></div>
+  </section>
+</main>
+
+<div id="gameModal" class="game-modal" aria-hidden="true">
+  <div class="game-modal-card" role="dialog" aria-modal="true" aria-labelledby="gameModalTitle">
+    <h2 id="gameModalTitle" class="game-modal-title">Game selesai</h2>
+    <p id="gameModalText" class="game-modal-text">-</p>
+    <div class="game-modal-actions">
+      <button id="gameModalRematchBtn" class="action-btn" type="button">Main Lagi</button>
+      <button id="gameModalCloseBtn" class="action-btn" type="button">Tidak</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
 const SUPABASE_URL = "https://vgqzzmghoyfhwukksbzv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ZZmh_NNgicmaPLY2HXO2yw_am3UB8h4";
 
@@ -604,20 +590,11 @@ const roomInfoPill = document.getElementById("roomInfo");
 const roleInfo = document.getElementById("roleInfo");
 const statusStrip = document.getElementById("statusStrip");
 const statusCard = document.getElementById("statusCard");
-const createRoomBtn = document.getElementById("createRoomBtn");
 const shareWhatsAppBtn = document.getElementById("shareWhatsAppBtn");
 const gameModal = document.getElementById("gameModal");
 const gameModalText = document.getElementById("gameModalText");
 const gameModalRematchBtn = document.getElementById("gameModalRematchBtn");
 const gameModalCloseBtn = document.getElementById("gameModalCloseBtn");
-
-if (!roomId) {
-  statusMessage.innerText = "Klik Buat Room untuk mulai.";
-  statusIcon.innerText = "＋";
-  roleInfo.innerText = "Belum ada room aktif.";
-  roomInfo.innerText = "Room: -";
-  roomInfoPill.title = "Room: -";
-}
 
 function getWinner(board) {
   return checkWinner(board);
@@ -676,14 +653,9 @@ function announceOutcome(room, winner) {
   if (lastAnnouncedResult === outcomeKey) return;
 
   lastAnnouncedResult = outcomeKey;
-  const canRematch = isRoomOwner();
   const message = winner === "draw"
-    ? (canRematch
-      ? "Permainan berakhir seri. Main lagi?"
-      : "Permainan berakhir seri. Menunggu pemilik room memilih main lagi atau tidak.")
-    : (canRematch
-      ? `${winner} keluar sebagai pemenang. Main lagi?`
-      : `${winner} menang. Menunggu pemilik room memilih main lagi atau tidak.`);
+    ? "Permainan berakhir seri."
+    : `${winner} keluar sebagai pemenang.`;
 
   openOutcomeModal(room, winner, winner === "draw" ? "Hasil seri" : "Selamat", message);
 }
@@ -695,6 +667,7 @@ function openOutcomeModal(room, winner, title, message) {
   gameModal.setAttribute("aria-hidden", "false");
 
   const modalKey = getOutcomeKey(room, winner);
+  if (lastModalKey === modalKey) return;
   lastModalKey = modalKey;
 
   const canRematch = isRoomOwner();
@@ -708,75 +681,47 @@ function closeOutcomeModal() {
 }
 
 async function createRoom() {
-  try {
-    const { data, error } = await client
-      .from("rooms")
-      .insert({
-        board: "---------",
-        turn: "X",
-        player_x: null,
-        player_o: null
-      })
-      .select()
-      .maybeSingle();
+  const { data } = await client.from("rooms").insert({
+    board: "---------",
+    turn: "X",
+    player_x: null,
+    player_o: null
+  }).select().single();
 
-    if (error || !data) {
-      throw error || new Error("Unable to create room");
-    }
-
-    window.location.href = "?room=" + data.id;
-    return true;
-  } catch (error) {
-    console.error("createRoom failed", error);
-    statusMessage.innerText = "Gagal membuat room. Coba refresh atau cek koneksi Supabase.";
-    statusIcon.innerText = "!";
-    statusStrip.className = "status-strip state-opponent-turn";
-    roleInfo.innerText = "Room belum bisa dibuat.";
-    return false;
-  }
+  window.location.href = "?room=" + data.id;
 }
 
 async function joinRoom() {
-  try {
-    const { data: room, error } = await client
-      .from("rooms")
-      .select("*")
-      .eq("id", roomId)
-      .maybeSingle();
+  const { data: room, error } = await client
+    .from("rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
 
-    if (error || !room) {
-      statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
-      statusIcon.innerText = "!";
-      statusStrip.className = "status-strip state-opponent-turn";
-      roleInfo.innerText = "Kamu belum masuk ke room.";
-      roomInfo.innerText = "Room: -";
-      roomInfoPill.title = "Room: -";
-      return false;
-    }
-
-    if (!room.player_x) {
-      player = "X";
-      localStorage.setItem("player", player);
-      await client.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
-    } else if (!room.player_o) {
-      player = "O";
-      localStorage.setItem("player", player);
-      await client.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
-    } else {
-      player = localStorage.getItem("player");
-    }
-
-    return true;
-  } catch (error) {
-    console.error("joinRoom failed", error);
-    statusMessage.innerText = "Gagal masuk room. Coba refresh atau cek koneksi Supabase.";
+  if (error || !room) {
+    statusMessage.innerText = "Room tidak ditemukan. Buat room baru atau cek link room-nya.";
     statusIcon.innerText = "!";
     statusStrip.className = "status-strip state-opponent-turn";
-    roleInfo.innerText = "Kamu belum bisa masuk room.";
+    statusStrip.classList.add("state-opponent-turn");
+    roleInfo.innerText = "Kamu belum masuk ke room.";
     roomInfo.innerText = "Room: -";
     roomInfoPill.title = "Room: -";
     return false;
   }
+
+  if (!room.player_x) {
+    player = "X";
+    localStorage.setItem("player", player);
+    await client.from("rooms").update({ player_x: "joined" }).eq("id", roomId);
+  } else if (!room.player_o) {
+    player = "O";
+    localStorage.setItem("player", player);
+    await client.from("rooms").update({ player_o: "joined" }).eq("id", roomId);
+  } else {
+    player = localStorage.getItem("player");
+  }
+
+  return true;
 }
 
 async function resetRoom() {
@@ -854,11 +799,33 @@ function renderRoom(room) {
     statusIcon.innerText = "•";
   }
 
+  const winner = getWinner(room.board);
+  const modalKey = getOutcomeKey(room, winner);
+  const canPromptRematch = !!winner && isRoomOwner();
+
   if (!winner) {
     lastModalKey = "";
     if (gameModal.classList.contains("is-open")) {
       closeOutcomeModal();
     }
+  } else if (canPromptRematch && lastModalKey !== modalKey) {
+    openOutcomeModal(
+      room,
+      winner,
+      winner === "draw" ? "Hasil seri" : "Selamat",
+      winner === "draw"
+        ? "Permainan berakhir seri."
+        : `${winner} keluar sebagai pemenang. Main lagi?`
+    );
+  } else if (!canPromptRematch && gameModal.classList.contains("is-open") && lastModalKey !== modalKey) {
+    openOutcomeModal(
+      room,
+      winner,
+      winner === "draw" ? "Hasil seri" : "Game selesai",
+      winner === "draw"
+        ? "Permainan berakhir seri. Menunggu pemilik room memilih main lagi atau tidak."
+        : `${winner} menang. Menunggu pemilik room memilih main lagi atau tidak.`
+    );
   }
 
   announceOutcome(room, winner);
@@ -939,11 +906,7 @@ function updateUI(room) {
 
 async function init() {
   if (!roomId) {
-    statusMessage.innerText = "Klik Buat Room untuk mulai.";
-    statusIcon.innerText = "＋";
-    roleInfo.innerText = "Belum ada room aktif.";
-    roomInfo.innerText = "Room: -";
-    roomInfoPill.title = "Room: -";
+    await createRoom();
     return;
   }
 
@@ -961,8 +924,20 @@ async function init() {
       refreshRoom();
     }
   });
+
+  client
+    .channel("room-" + roomId)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+      payload => {
+        if (payload.new) {
+          updateUI(payload.new);
+        }
+      }
+    )
+    .subscribe();
 }
-  createRoomBtn.addEventListener("click", createRoom);
 
 shareWhatsAppBtn.addEventListener("click", shareRoomToWhatsApp);
 gameModalRematchBtn.addEventListener("click", resetRoom);
@@ -974,3 +949,7 @@ gameModal.addEventListener("click", event => {
 });
 
 init();
+</script>
+
+</body>
+</html>
