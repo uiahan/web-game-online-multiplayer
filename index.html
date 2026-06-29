@@ -2,40 +2,178 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TicTacToe Online</title>
 <style>
+:root {
+  --bg-1: #07111f;
+  --bg-2: #0d1b2d;
+  --panel: rgba(12, 19, 32, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --text: #f4f7fb;
+  --muted: #94a3b8;
+  --accent: #7dd3fc;
+  --accent-2: #34d399;
+  --danger: #fb7185;
+  --cell: rgba(255, 255, 255, 0.06);
+  --cell-hover: rgba(125, 211, 252, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-height: 100%;
+}
+
 body {
-  font-family: Arial;
-  text-align: center;
-  background: #111;
-  color: white;
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(52, 211, 153, 0.14), transparent 24%),
+    linear-gradient(160deg, var(--bg-1), var(--bg-2));
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.app-shell {
+  width: min(92vw, 520px);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1;
+}
+
+.subtitle {
+  margin: 10px 0 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+#status, #roomInfo {
+  margin: 0;
+}
+
+#status {
+  font-weight: 600;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 #board {
   display: grid;
-  grid-template-columns: repeat(3, 100px);
-  gap: 10px;
-  justify-content: center;
-  margin-top: 30px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
-button {
-  width: 100px;
-  height: 100px;
-  font-size: 30px;
+.cell {
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  color: var(--text);
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  font-weight: 800;
   cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-#status {
-  margin-top: 20px;
+.cell:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 0.45);
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.16), rgba(255, 255, 255, 0.05));
+  box-shadow: 0 12px 30px rgba(125, 211, 252, 0.12);
+}
+
+.cell:disabled {
+  cursor: default;
+  opacity: 0.92;
+}
+
+.x {
+  color: #7dd3fc;
+  text-shadow: 0 0 22px rgba(125, 211, 252, 0.26);
+}
+
+.o {
+  color: #34d399;
+  text-shadow: 0 0 22px rgba(52, 211, 153, 0.26);
+}
+
+.footer-note {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 22px 16px;
+    border-radius: 22px;
+  }
+
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
 </head>
 <body>
 
-<h1>TicTacToe Online</h1>
-<p id="status">Loading...</p>
-<div id="board"></div>
+<main class="app-shell">
+  <p class="eyebrow">Realtime Multiplayer</p>
+  <h1>TicTacToe Online</h1>
+  <p class="subtitle">Main bareng teman dalam satu room, dan semua perubahan langsung tampil tanpa perlu refresh.</p>
+
+  <div class="status-row">
+    <p id="status">Loading...</p>
+    <p id="roomInfo" class="pill">Room: -</p>
+  </div>
+
+  <div id="board" aria-label="TicTacToe board"></div>
+  <p class="footer-note">Tip: buka link room yang sama di dua tab atau dua perangkat untuk main bareng.</p>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -49,15 +187,24 @@ const client = window.supabase.createClient(
 
 let roomId = new URLSearchParams(window.location.search).get("room");
 let player = null;
+let currentRoom = null;
 
 const boardDiv = document.getElementById("board");
 const statusText = document.getElementById("status");
+const roomInfo = document.getElementById("roomInfo");
 
-function renderBoard(board) {
+function getWinner(board) {
+  return checkWinner(board);
+}
+
+function renderBoard(board, room) {
   boardDiv.innerHTML = "";
   board.split("").forEach((cell, i) => {
     const btn = document.createElement("button");
+    btn.className = "cell" + (cell === "X" ? " x" : cell === "O" ? " o" : "");
     btn.innerText = cell === "-" ? "" : cell;
+    btn.setAttribute("aria-label", `Cell ${i + 1}${cell === '-' ? '' : ': ' + cell}`);
+    btn.disabled = !room || !!getWinner(room.board) || room.turn !== player || cell !== "-";
     btn.onclick = () => makeMove(i);
     boardDiv.appendChild(btn);
   });
@@ -112,7 +259,43 @@ async function joinRoom() {
   }
 }
 
+function renderRoom(room) {
+  currentRoom = room;
+
+  renderBoard(room.board, room);
+
+  const winner = getWinner(room.board);
+  roomInfo.innerText = `Room: ${room.id}`;
+
+  if (winner === "draw") {
+    statusText.innerText = "Hasil: seri";
+    return;
+  }
+
+  if (winner) {
+    statusText.innerText = winner === player ? "Kamu menang" : `Pemenang: ${winner}`;
+    return;
+  }
+
+  if (!room.player_x || !room.player_o) {
+    statusText.innerText = "Menunggu player lain...";
+    return;
+  }
+
+  if (!player) {
+    statusText.innerText = "Kamu sebagai penonton";
+    return;
+  }
+
+  statusText.innerText = room.turn === player ? `Giliran kamu (${player})` : `Menunggu giliran ${room.turn}`;
+}
+
 async function makeMove(index) {
+  if (!currentRoom) return;
+
+  const winnerBeforeMove = getWinner(currentRoom.board);
+  if (winnerBeforeMove || currentRoom.turn !== player) return;
+
   const { data: room } = await client
     .from("rooms")
     .select("*")
@@ -128,11 +311,19 @@ async function makeMove(index) {
   board[index] = player;
 
   const winner = checkWinner(board.join(""));
+  const nextTurn = player === "X" ? "O" : "X";
+  const updatedRoom = {
+    ...room,
+    board: board.join(""),
+    turn: winner ? room.turn : nextTurn
+  };
 
   await client.from("rooms").update({
-    board: board.join(""),
-    turn: player === "X" ? "O" : "X"
+    board: updatedRoom.board,
+    turn: updatedRoom.turn
   }).eq("id", roomId);
+
+  renderRoom(updatedRoom);
 
   if (winner) {
     setTimeout(() => {
@@ -142,13 +333,7 @@ async function makeMove(index) {
 }
 
 function updateUI(room) {
-  renderBoard(room.board);
-
-  if (!room.player_x || !room.player_o) {
-    statusText.innerText = "Menunggu player lain...";
-  } else {
-    statusText.innerText = "Giliran: " + room.turn;
-  }
+  renderRoom(room);
 }
 
 async function init() {
