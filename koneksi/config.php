@@ -1,0 +1,4 @@
+<?php
+$SUPABASE_URL = "https://vgqzzmghoyfhwukksbzv.supabase.co";
+$SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZncXp6bWdob3lmaHd1a2tzYnp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDQ1NDYsImV4cCI6MjA5ODI4MDU0Nn0.VfYVRXfMvoYcblTuOF7PYeVvcaMB2iCirvWboYT7HsE";
+?>

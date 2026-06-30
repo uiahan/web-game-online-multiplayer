@@ -1,0 +1,45 @@
+body {
+  background-color: #fff8f5;
+  background-image: radial-gradient(#ffe3d0 2px, transparent 2px);
+  background-size: 32px 32px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+.bubbly-shadow {
+  box-shadow: 0 8px 0px 0px rgba(112, 92, 74, 0.1);
+}
+
+.bubbly-button {
+  box-shadow: 0 4px 0px 0px rgba(41, 75, 92, 0.4);
+  transition: all 0.2s ease;
+}
+
+.bubbly-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 0px 0px 0px rgba(41, 75, 92, 0.4);
+}
+
+.kawaii-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}

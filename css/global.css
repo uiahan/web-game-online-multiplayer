@@ -1,0 +1,22 @@
+html {
+  scroll-behavior: smooth !important;
+}
+
+/* Custom scrollbar untuk nuansa yang lebih aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fff8f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a2c4d9; /* Warna utama baru */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  /* Warna sedikit lebih gelap dari #a2c4d9 untuk efek hover */
+  background: #8aaebf; 
+}
