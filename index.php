@@ -1,3 +1,26 @@
+<?php
+$request = $_SERVER['REQUEST_URI'];
+$base = '/ulinkeun';
+$path = str_replace($base, '', $request);
+
+// daftar halaman yang valid
+$allowed = [
+    '/',
+    '/index.php',
+    '/about.php',
+    '/login.php',
+    '/daftar.php',
+    '/game.php',
+    '/cetak-kartu.php'
+];
+
+if (!in_array($path, $allowed)) {
+    http_response_code(404);
+    include '404.php';
+    exit;
+}
+?>
+
 <!DOCTYPE html>
 <html class="light" lang="id">
 
@@ -74,7 +97,7 @@
                 </div>
 
             </div>
-            <div class="space-y-md text-center lg:text-left">
+            <div class="space-y-md xl:text-center lg:text-left">
                 <div
                     class="inline-flex items-center gap-xs px-4 py-2 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm shadow-sm">
                     <span
@@ -103,7 +126,7 @@
                     </a>
                     <a
                         href="game.php"
-                        class="secondary-bouncy w-full sm:w-auto px-10 py-5 bg-surface-container-highest text-secondary rounded-full font-title-md text-title-md border-2 border-outline-variant/30">
+                        class="secondary-bouncy text-center w-full sm:w-auto px-10 py-5 bg-surface-container-highest text-secondary rounded-full font-title-md text-title-md border-2 border-outline-variant/30">
                         Koleksi Game
                     </a>
                 </div>
@@ -114,7 +137,7 @@
     <!-- Why Play Section -->
     <section id="why" class="py-xl px-gutter xl:pt-40 bg-surface-container-low">
         <div class="max-w-container-max mx-auto">
-            <div class="text-center mb-lg">
+            <div class="xl:text-center mb-lg">
                 <h2
                     class="font-headline-lg text-headline-lg text-on-surface mb-base">Kenapa
                     Bermain di Ulinkeun?</h2>
@@ -188,12 +211,12 @@
             </div>
             <div
                 class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-lg">
-                <div class="max-w-xl text-center lg:text-left">
+                <div class="max-w-xl lg:text-left">
                     <h2
-                        class="font-display-lg text-headline-lg text-on-primary-container mb-md">Sudah
-                        Siap Bersenang-senang?</h2>
+                        class="font-display-lg text-start text-headline-lg text-on-primary-container mb-md">Sudah
+                        Siap Untuk Keseruan?</h2>
                     <p
-                        class="font-body-lg text-body-lg text-on-primary-container/80 mb-md">Gabung
+                        class="font-body-lg text-body-lg text-start text-on-primary-container/80 mb-md">Gabung
                         bersama pemain lainnya sekarang juga dan
                         mulai petualanganmu di dunia Ulinkeun!</p>
                     <!-- <div
@@ -227,7 +250,7 @@
                 </div>
                 <div class="flex flex-col gap-sm w-full lg:w-auto">
                     <a href="daftar.php"
-                        class="bouncy-button px-12 py-5 bg-primary text-on-primary rounded-full font-title-md text-title-md flex items-center justify-center gap-sm">
+                        class="bouncy-button text-center px-12 py-5 bg-primary text-on-primary rounded-full font-title-md text-title-md flex items-center justify-center gap-sm">
                         Daftar Gratis Sekarang
                         <!-- <span
                             class="material-symbols-outlined">person_add</span> -->

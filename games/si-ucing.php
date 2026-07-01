@@ -1,0 +1,1454 @@
+<?php
+session_start();
+
+// Jika belum login, tendang ke halaman login
+if (!isset($_SESSION['user'])) {
+  header("Location: ../login.php");
+  exit;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Si Ucing</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #201030;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    #game-container {
+      position: relative;
+      box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
+      border: 6px solid #f8a400;
+      border-radius: 12px;
+    }
+
+    canvas {
+      display: block;
+      background: #70bcff;
+    }
+
+    .controls-tip {
+      position: absolute;
+      bottom: -45px;
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+      color: #f8f8f8;
+      text-shadow: 2px 2px 2px #000;
+    }
+  </style>
+</head>
+
+<body>
+  <button
+    onclick="
+        window.history.length > 1
+          ? window.history.back()
+          : (window.location.href = 'index.php')
+      "
+    style="
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 9999;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(8px);
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        font-size: 18px;
+      ">
+    ✕
+  </button>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="controls-tip">A/D: Jalan | SPACE/W: Lompat | LSHIFT: Dash | Tahan J: Laser | K: ULTI | <b>P: PAUSE</b></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const SCREEN_WIDTH = 800;
+    const SCREEN_HEIGHT = 600;
+
+    let game_state = "START_MENU";
+    let camera_x = 0;
+    let keys = {};
+    let boss_item_timer = 0;
+
+    window.addEventListener("keydown", (e) => {
+      let key = e.key.toLowerCase();
+      keys[key] = true;
+
+      if (game_state === "START_MENU") {
+        game_state = "PLAYING";
+        return;
+      }
+
+      // --- LOGIKA TOMBOL PAUSE DI KEYBOARD ---
+      if (key === 'p' && (game_state === "PLAYING" || game_state === "PAUSED")) {
+        game_state = (game_state === "PLAYING") ? "PAUSED" : "PLAYING";
+        return;
+      }
+
+      if (game_state === "PAUSED") {
+        if (key === 'r') {
+          resetFullGame();
+          return;
+        }
+        if (key === 's') {
+          game_state = "START_MENU";
+          return;
+        }
+        if (key === 'm') {
+          game_state = "CLOSED"; // Pindah ke state closed
+          window.close(); // Coba close tab langsung via sistem
+          return;
+        }
+      }
+
+      if ((game_state === "GAME_OVER" || game_state === "VICTORY") && key === 'r') {
+        resetFullGame();
+      }
+      if (game_state === "PLAYING" && key === 'k') {
+        player.activateUltimate();
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    // --- CLASS PLAYER ---
+    class Player {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 34;
+        this.height = 48;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = 5.5;
+        this.gravity = 0.6;
+        this.jump_speed = -14.5;
+        this.is_grounded = false;
+        this.facing = 1;
+
+        this.hp = 100;
+        this.max_hp = 100;
+        this.invincible_timer = 0;
+        this.has_revive = false;
+        this.last_safe_x = x;
+        this.last_safe_y = y;
+
+        this.weapon_type = "Nail";
+        this.is_attacking = false;
+        this.attack_timer = 0;
+        this.attack_duration = 0;
+        this.attack_cooldown = 0;
+        this.attack_cooldown_max = 0;
+        this.attack_rect = {
+          x: 0,
+          y: 0,
+          w: 0,
+          h: 0
+        };
+        this.recoil_timer = 0;
+
+        this.ult_bar = 0;
+        this.max_ult_bar = 100;
+        this.is_ult_active = false;
+        this.ult_timer = 0;
+
+        this.is_dashing = false;
+        this.dash_timer = 0;
+        this.dash_duration = 10;
+        this.dash_speed = 16;
+        this.dash_cooldown = 0;
+        this.dash_cooldown_max = 25;
+        this.ghosts = [];
+
+        this.walk_cycle = 0;
+        this.tilt_angle = 0;
+      }
+
+      activateUltimate() {
+        if (this.ult_bar >= this.max_ult_bar && !this.is_ult_active) {
+          this.is_ult_active = true;
+          this.ult_bar = this.max_ult_bar;
+          this.ult_timer = 1200;
+        }
+      }
+
+      handleInput() {
+        if (this.is_dashing || this.recoil_timer > 0) return;
+
+        this.vx = 0;
+        if (keys['a'] || keys['arrowleft']) {
+          this.vx = -this.speed;
+          this.facing = -1;
+          this.walk_cycle += 0.25;
+        }
+        if (keys['d'] || keys['arrowright']) {
+          this.vx = this.speed;
+          this.facing = 1;
+          this.walk_cycle += 0.25;
+        }
+
+        let target_tilt = this.vx * 0.03;
+        this.tilt_angle += (target_tilt - this.tilt_angle) * 0.2;
+
+        if ((keys[' '] || keys['w'] || keys['arrowup']) && this.is_grounded) {
+          this.vy = this.jump_speed;
+          this.is_grounded = false;
+        }
+
+        if (keys['shift'] && this.dash_cooldown === 0) {
+          this.is_dashing = true;
+          this.dash_timer = this.dash_duration;
+          this.dash_cooldown = this.dash_cooldown_max;
+          this.vy = 0;
+        }
+
+        if (keys['j']) {
+          if (this.is_ult_active) {
+            this.is_attacking = true;
+            this.attack_timer = 4;
+            this.attack_cooldown = 0;
+          } else if (this.attack_cooldown === 0 && !this.is_attacking) {
+            this.is_attacking = true;
+            if (this.weapon_type === "Nail") {
+              this.attack_duration = 10;
+              this.attack_cooldown_max = 16;
+            } else if (this.weapon_type === "Whip") {
+              this.attack_duration = 8;
+              this.attack_cooldown_max = 22;
+            } else if (this.weapon_type === "Mace") {
+              this.attack_duration = 16;
+              this.attack_cooldown_max = 32;
+            }
+            this.attack_timer = this.attack_duration;
+          }
+        }
+      }
+
+      update(platforms, enemies, boss, items, world) {
+        if (this.dash_cooldown > 0) this.dash_cooldown--;
+        if (this.attack_cooldown > 0) this.attack_cooldown--;
+        if (this.recoil_timer > 0) this.recoil_timer--;
+        if (this.invincible_timer > 0) this.invincible_timer--;
+
+        if (this.is_ult_active) {
+          this.ult_timer--;
+          this.ult_bar = (this.ult_timer / 1200) * this.max_ult_bar;
+          if (this.ult_timer <= 0) {
+            this.is_ult_active = false;
+            this.ult_bar = 0;
+            this.is_attacking = false;
+          }
+        }
+
+        if (this.is_grounded && this.vy === 0) {
+          this.last_safe_x = this.x;
+          this.last_safe_y = this.y - 10;
+        }
+
+        if (this.y > SCREEN_HEIGHT + 40) {
+          this.triggerReviveOrDie();
+          return;
+        }
+
+        if (this.is_dashing) {
+          this.vx = this.facing * this.dash_speed;
+          this.vy = 0;
+          this.ghosts.push({
+            x: this.x,
+            y: this.y,
+            alpha: 0.5
+          });
+          this.dash_timer--;
+          if (this.dash_timer <= 0) this.is_dashing = false;
+        } else {
+          if (this.recoil_timer === 0) {
+            this.vy += this.gravity;
+            if (this.vy > 12) this.vy = 12;
+          }
+        }
+
+        this.ghosts.forEach((g, idx) => {
+          g.alpha -= 0.07;
+          if (g.alpha <= 0) this.ghosts.splice(idx, 1);
+        });
+
+        this.x += this.vx;
+        platforms.forEach(plat => {
+          if (this.checkCollision(this, plat)) {
+            if (this.vx > 0) this.x = plat.x - this.width;
+            if (this.vx < 0) this.x = plat.x + plat.width;
+          }
+        });
+
+        this.y += this.vy;
+        this.is_grounded = false;
+        platforms.forEach(plat => {
+          if (this.checkCollision(this, plat)) {
+            if (this.vy > 0) {
+              this.y = plat.y - this.height;
+              this.vy = 0;
+              this.is_grounded = true;
+            } else if (this.vy < 0) {
+              this.y = plat.y + plat.height;
+              this.vy = 0;
+            }
+          }
+        });
+
+        for (let i = items.length - 1; i >= 0; i--) {
+          if (this.checkCollision(this, items[i])) {
+            let item = items[i];
+            if (item.type === "Heal") this.hp = Math.min(this.max_hp, this.hp + 35);
+            else if (item.type === "Revive") this.has_revive = true;
+            else if (item.type === "Whip" || item.type === "Mace") this.weapon_type = item.type;
+            items.splice(i, 1);
+          }
+        }
+
+        if (this.is_attacking) {
+          if (this.is_ult_active) {
+            let laser_range = 850;
+            this.attack_rect = {
+              x: this.facing === 1 ? this.x + this.width : this.x - laser_range,
+              y: this.y + 2,
+              w: laser_range,
+              h: 32
+            };
+
+            enemies.forEach(enemy => {
+              if (enemy.alive && this.checkCollision(this.attack_rect, enemy)) {
+                enemy.takeDamage(20);
+              }
+            });
+            if (boss && boss.alive && world.in_castle && this.checkCollision(this.attack_rect, boss)) {
+              boss.takeDamage(8);
+            }
+
+            this.attack_timer--;
+            if (this.attack_timer <= 0) this.is_attacking = false;
+          } else {
+            let w_width = 55,
+              w_height = 45,
+              damage = 20;
+            if (this.weapon_type === "Whip") {
+              w_width = 105;
+              w_height = 20;
+              damage = 14;
+            } else if (this.weapon_type === "Mace") {
+              w_width = 50;
+              w_height = 75;
+              damage = 42;
+            }
+
+            this.attack_rect = {
+              x: this.facing === 1 ? this.x + this.width : this.x - w_width,
+              y: this.y + 5,
+              w: w_width,
+              h: w_height
+            };
+
+            enemies.forEach(enemy => {
+              if (enemy.alive && this.checkCollision(this.attack_rect, enemy)) {
+                if (enemy.takeDamage(damage)) {
+                  this.recoil_timer = 6;
+                  if (!this.is_grounded) this.vy = -5;
+                  if (!this.is_ult_active) this.ult_bar = Math.min(this.max_ult_bar, this.ult_bar + 8);
+                }
+              }
+            });
+
+            if (boss && boss.alive && world.in_castle && this.checkCollision(this.attack_rect, boss)) {
+              if (boss.takeDamage(damage)) {
+                this.recoil_timer = 6;
+                if (!this.is_grounded) this.vy = -5;
+                if (!this.is_ult_active) this.ult_bar = Math.min(this.max_ult_bar, this.ult_bar + 12);
+              }
+            }
+
+            this.attack_timer--;
+            if (this.attack_timer <= 0) {
+              this.is_attacking = false;
+              this.attack_cooldown = this.attack_cooldown_max;
+            }
+          }
+        }
+
+        if (this.invincible_timer === 0) {
+          enemies.forEach(enemy => {
+            if (enemy.alive && this.checkCollision(this, enemy)) {
+              this.takeDamage(15);
+            }
+          });
+          if (boss && boss.alive && world.in_castle && this.checkCollision(this, boss)) {
+            this.takeDamage(25);
+          }
+        }
+      }
+
+      takeDamage(amount) {
+        this.hp -= amount;
+        this.invincible_timer = 50;
+        this.vy = -6;
+        this.recoil_timer = 12;
+        this.vx = this.facing * -4;
+        if (this.hp <= 0) {
+          this.triggerReviveOrDie();
+        }
+      }
+
+      triggerReviveOrDie() {
+        if (this.has_revive) {
+          this.has_revive = false;
+          this.hp = 50;
+          this.x = this.last_safe_x;
+          this.y = this.last_safe_y;
+          this.vx = 0;
+          this.vy = 0;
+          this.invincible_timer = 90;
+        } else {
+          this.hp = 0;
+          game_state = "GAME_OVER";
+        }
+      }
+
+      checkCollision(r1, r2) {
+        let r1x = r1.x,
+          r1y = r1.y,
+          r1w = r1.w || r1.width,
+          r1h = r1.h || r1.height;
+        let r2x = r2.x,
+          r2y = r2.y,
+          r2w = r2.w || r2.width,
+          r2h = r2.h || r2.height;
+        return r1x < r2x + r2w && r1x + r1w > r2x && r1y < r2y + r2h && r1y + r1h > r2y;
+      }
+
+      draw(camX) {
+        this.ghosts.forEach(g => {
+          ctx.fillStyle = `rgba(255, 255, 255, ${g.alpha * 0.4})`;
+          ctx.fillRect(g.x - camX, g.y, this.width, this.height);
+        });
+
+        if (this.invincible_timer % 4 >= 2) return;
+
+        let rx = this.x - camX;
+        let ry = this.y;
+        let bobY = (this.vx !== 0 && this.is_grounded) ? Math.sin(this.walk_cycle) * 3 : 0;
+
+        ctx.save();
+        ctx.translate(rx + this.width / 2, ry + this.height);
+        ctx.rotate(this.tilt_angle);
+
+        // --- EKOR ---
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        let tailWiggle = Math.sin(Date.now() * 0.012) * 5;
+        if (this.facing === 1) {
+          ctx.moveTo(-10, -12);
+          ctx.quadraticCurveTo(-22 + tailWiggle, -18, -16 + tailWiggle, -28);
+        } else {
+          ctx.moveTo(10, -12);
+          ctx.quadraticCurveTo(22 + tailWiggle, -18, 16 + tailWiggle, -28);
+        }
+        ctx.stroke();
+
+        // --- TUBUH ---
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(-12, -34, 24, 30);
+        ctx.fillStyle = "#e0e0e0";
+        ctx.beginPath();
+        ctx.arc(-7, -2, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(7, -2, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- KEPALA ---
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(0, -42 + bobY, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-13, -48 + bobY);
+        ctx.lineTo(-16, -62 + bobY);
+        ctx.lineTo(-3, -52 + bobY);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(13, -48 + bobY);
+        ctx.lineTo(16, -62 + bobY);
+        ctx.lineTo(3, -52 + bobY);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffb6c1";
+        ctx.beginPath();
+        ctx.moveTo(-11, -49 + bobY);
+        ctx.lineTo(-13, -58 + bobY);
+        ctx.lineTo(-5, -51 + bobY);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(10, -49 + bobY);
+        ctx.lineTo(13, -58 + bobY);
+        ctx.lineTo(5, -51 + bobY);
+        ctx.fill();
+
+        ctx.fillStyle = this.is_ult_active ? "#00ffff" : "#1a1a1a";
+        let eyeShift = this.facing === 1 ? 2 : -2;
+        ctx.beginPath();
+        ctx.arc(-6 + eyeShift, -41 + bobY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(6 + eyeShift, -41 + bobY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffb6c1";
+        ctx.beginPath();
+        ctx.arc(0 + eyeShift, -37 + bobY, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#999999";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-8 + eyeShift, -37 + bobY);
+        ctx.lineTo(-15 + eyeShift, -39 + bobY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-8 + eyeShift, -35 + bobY);
+        ctx.lineTo(-15 + eyeShift, -34 + bobY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(8 + eyeShift, -37 + bobY);
+        ctx.lineTo(15 + eyeShift, -39 + bobY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(8 + eyeShift, -35 + bobY);
+        ctx.lineTo(15 + eyeShift, -34 + bobY);
+        ctx.stroke();
+
+        if (!this.is_ult_active) {
+          ctx.save();
+          ctx.translate(this.facing === 1 ? 14 : -14, -18);
+          ctx.rotate(this.facing === 1 ? 0.3 : -0.3);
+          if (this.weapon_type === "Nail") {
+            let pedangGrad = ctx.createLinearGradient(-4, -30, 4, 0);
+            pedangGrad.addColorStop(0, "#ffffff");
+            pedangGrad.addColorStop(1, "#778899");
+            ctx.fillStyle = pedangGrad;
+            ctx.beginPath();
+            ctx.moveTo(0, -32);
+            ctx.lineTo(6, -8);
+            ctx.lineTo(2, 0);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-6, -8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#333";
+            ctx.fillRect(-1, 0, 2, 6);
+          } else if (this.weapon_type === "Mace") {
+            ctx.fillStyle = "#474b4e";
+            ctx.fillRect(-2, 0, 4, 18);
+            ctx.fillStyle = "#a1a8ad";
+            ctx.beginPath();
+            ctx.arc(0, -6, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#d1d5db";
+            ctx.beginPath();
+            ctx.moveTo(-10, -6);
+            ctx.lineTo(-16, -6);
+            ctx.lineTo(-8, -10);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(10, -6);
+            ctx.lineTo(16, -6);
+            ctx.lineTo(8, -10);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(0, -16);
+            ctx.lineTo(0, -22);
+            ctx.lineTo(4, -14);
+            ctx.fill();
+          } else if (this.weapon_type === "Whip") {
+            ctx.strokeStyle = "#9932cc";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 10);
+            ctx.quadraticCurveTo(15 * this.facing, -5, 5 * this.facing, -22);
+            ctx.stroke();
+            ctx.fillStyle = "#da70d6";
+            ctx.fillRect(-2, 8, 4, 6);
+          }
+          ctx.restore();
+        }
+        ctx.restore();
+
+        if (this.is_attacking) {
+          let cx = rx + this.width / 2;
+          let cy = ry + this.height / 2;
+          if (this.is_ult_active) {
+            let lx = this.attack_rect.x - camX;
+            let ly = this.attack_rect.y;
+            let lw = this.attack_rect.w;
+            let lh = this.attack_rect.h;
+
+            ctx.save();
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = "#00ffff";
+            ctx.fillStyle = "rgba(0, 255, 255, 0.35)";
+            ctx.fillRect(lx, ly - 6, lw, lh + 12);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(lx, ly, lw, lh);
+            let muzzleX = this.facing === 1 ? rx + this.width : rx;
+            let pulseRing = 16 + Math.sin(Date.now() * 0.06) * 5;
+            ctx.fillStyle = "#ffff00";
+            ctx.beginPath();
+            ctx.arc(muzzleX, ly + lh / 2, pulseRing, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          } else {
+            ctx.save();
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = this.weapon_type === "Mace" ? "#ff4500" : (this.weapon_type === "Whip" ? "#ba55d3" : "#87cefa");
+            let sweepGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 60);
+            sweepGrad.addColorStop(0, "rgba(255,255,255,0)");
+            sweepGrad.addColorStop(0.7, this.weapon_type === "Mace" ? "rgba(255,69,0,0.4)" : (this.weapon_type === "Whip" ? "rgba(186,85,211,0.4)" : "rgba(135,206,250,0.4)"));
+            sweepGrad.addColorStop(1, "rgba(255,255,255,0.9)");
+            ctx.fillStyle = sweepGrad;
+            ctx.beginPath();
+            if (this.facing === 1) {
+              ctx.arc(cx, cy, 65, -Math.PI / 2.5, Math.PI / 2.5, false);
+            } else {
+              ctx.arc(cx, cy, 65, Math.PI - Math.PI / 2.5, Math.PI + Math.PI / 2.5, false);
+            }
+            ctx.lineTo(cx, cy);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+      }
+    }
+
+    // --- CLASS ENEMY PATROLI ---
+    class Enemy {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 38;
+        this.height = 38;
+        this.hp = 40;
+        this.max_hp = 40;
+        this.alive = true;
+        this.invincible_timer = 0;
+        this.speed = 1.5;
+        this.vy = 0;
+        this.gravity = 0.6;
+        this.direction = 1;
+        this.is_agro = false;
+        this.is_grounded = false;
+        this.anim_time = Math.random() * 100;
+      }
+
+      update(player, platforms) {
+        if (!this.alive) return;
+        if (this.invincible_timer > 0) this.invincible_timer--;
+
+        this.vy += this.gravity;
+        if (this.vy > 12) this.vy = 12;
+        this.anim_time += 0.15;
+
+        let distX = player.x + player.width / 2 - (this.x + this.width / 2);
+        let distY = Math.abs(player.y - this.y);
+
+        if (Math.abs(distX) < 260 && distY < 80) {
+          this.is_agro = true;
+          this.direction = distX > 0 ? 1 : -1;
+          this.speed = 3.3;
+        } else {
+          this.is_agro = false;
+          this.speed = 1.5;
+        }
+
+        if (this.is_grounded && !this.is_agro) {
+          let checkX = this.direction > 0 ? this.x + this.width + 15 : this.x - 15;
+          let checkY = this.y + this.height + 5;
+          let groundAhead = false;
+          platforms.forEach(plat => {
+            if (checkX > plat.x && checkX < plat.x + plat.width && checkY > plat.y && checkY < plat.y + plat.height) {
+              groundAhead = true;
+            }
+          });
+          if (!groundAhead) this.direction *= -1;
+        }
+
+        this.x += this.speed * this.direction;
+        platforms.forEach(plat => {
+          if (player.checkCollision(this, plat)) {
+            if (this.direction > 0) this.x = plat.x - this.width;
+            if (this.direction < 0) this.x = plat.x + plat.width;
+            this.direction *= -1;
+          }
+        });
+
+        this.y += this.vy;
+        this.is_grounded = false;
+        platforms.forEach(plat => {
+          if (player.checkCollision(this, plat)) {
+            if (this.vy > 0) {
+              this.y = plat.y - this.height;
+              this.vy = 0;
+              this.is_grounded = true;
+            }
+          }
+        });
+      }
+
+      takeDamage(amount) {
+        if (this.invincible_timer === 0) {
+          this.hp -= amount;
+          this.invincible_timer = 3;
+          if (this.hp <= 0) {
+            this.hp = 0;
+            this.alive = false;
+          }
+          return true;
+        }
+        return false;
+      }
+
+      draw(camX) {
+        if (!this.alive) return;
+        let rx = this.x - camX;
+        let ry = this.y;
+
+        if (this.hp > 0) {
+          let barW = this.width;
+          let barH = 5;
+          let barX = rx;
+          let barY = ry - 12;
+          ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+          ctx.fillRect(barX, barY, barW, barH);
+          ctx.fillStyle = "#ff3333";
+          ctx.fillRect(barX, barY, (this.hp / this.max_hp) * barW, barH);
+        }
+
+        if (this.invincible_timer > 0) {
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(rx, ry, this.width, this.height);
+          return;
+        }
+
+        let pulse = Math.sin(this.anim_time) * 2;
+        ctx.fillStyle = this.is_agro ? "#ff4500" : "#d82828";
+        ctx.beginPath();
+        ctx.arc(rx + 19, ry + 19, 17 + pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#501010";
+        ctx.lineWidth = 3;
+        let legOffset = Math.sin(this.anim_time * 2) * 5;
+        ctx.beginPath();
+        ctx.moveTo(rx + 6, ry + 30);
+        ctx.lineTo(rx - 2, ry + 38 + legOffset);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(rx + 32, ry + 30);
+        ctx.lineTo(rx + 40, ry + 38 - legOffset);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffff00";
+        let look = this.direction === 1 ? 5 : -2;
+        ctx.beginPath();
+        ctx.arc(rx + 12 + look, ry + 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(rx + 24 + look, ry + 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // --- CLASS FINAL BOSS ---
+    class FinalBoss {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 80;
+        this.height = 85;
+        this.hp = 450;
+        this.max_hp = 450;
+        this.alive = true;
+        this.invincible_timer = 0;
+        this.vy = 0;
+        this.gravity = 0.6;
+        this.speed = 2.4;
+        this.direction = -1;
+        this.state = "CHASE";
+        this.state_timer = 100;
+        this.is_grounded = false;
+        this.anim_float = 0;
+      }
+
+      update(player, platforms) {
+        if (!this.alive) return;
+        if (this.invincible_timer > 0) this.invincible_timer--;
+
+        this.vy += this.gravity;
+        if (this.vy > 12) this.vy = 12;
+        this.anim_float += 0.08;
+
+        this.state_timer--;
+        if (this.state_timer <= 0) {
+          let rng = Math.random();
+          if (rng < 0.35) {
+            this.state = "CHASE";
+            this.state_timer = 100 + Math.random() * 60;
+          } else if (rng < 0.65 && this.is_grounded) {
+            this.state = "STOMP_JUMP";
+            this.vy = -16;
+            this.state_timer = 90;
+          } else if (rng < 0.85) {
+            this.state = "PHANTOM_DASH";
+            this.state_timer = 40;
+          } else {
+            this.state = "TELEPORT";
+            this.x = player.x - 20;
+            this.y = player.y - 250;
+            this.vy = 5;
+            this.state_timer = 70;
+          }
+        }
+
+        let distX = player.x - this.x;
+        this.direction = distX > 0 ? 1 : -1;
+
+        if (this.state === "CHASE") {
+          this.x += this.speed * this.direction;
+        } else if (this.state === "PHANTOM_DASH") {
+          this.x += this.speed * 4.5 * this.direction;
+        } else if (this.state === "STOMP_JUMP") {
+          this.x += this.speed * 1.2 * this.direction;
+        }
+
+        this.y += this.vy;
+        this.is_grounded = false;
+        platforms.forEach(plat => {
+          if (player.checkCollision(this, plat)) {
+            if (this.vy > 0) {
+              this.y = plat.y - this.height;
+              this.vy = 0;
+              this.is_grounded = true;
+            }
+          }
+        });
+      }
+
+      takeDamage(amount) {
+        if (this.invincible_timer === 0) {
+          this.hp -= amount;
+          this.invincible_timer = 2;
+          if (this.hp <= 0) this.alive = false;
+          return true;
+        }
+        return false;
+      }
+
+      draw(camX) {
+        if (!this.alive) return;
+        let rx = this.x - camX;
+        let ry = this.y;
+
+        if (this.invincible_timer > 0) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(rx, ry, this.width, this.height);
+          return;
+        }
+
+        ctx.save();
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = this.state === "PHANTOM_DASH" ? "#ff0055" : "#aa00ff";
+        ctx.fillStyle = "#4a154b";
+        ctx.fillRect(rx, ry, this.width, this.height);
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(rx + 8, ry + 15, this.width - 16, this.height - 15);
+
+        ctx.fillStyle = "#fcb800";
+        ctx.beginPath();
+        ctx.moveTo(rx + 10, ry);
+        ctx.lineTo(rx + 20, ry - 18);
+        ctx.lineTo(rx + 40, ry - 5);
+        ctx.lineTo(rx + 60, ry - 18);
+        ctx.lineTo(rx + 70, ry);
+        ctx.closePath();
+        ctx.fill();
+
+        let fBob = Math.sin(this.anim_float) * 2;
+        ctx.fillStyle = "#ff0000";
+        ctx.fillRect(rx + 16, ry + 25 + fBob, 14, 14);
+        ctx.fillRect(rx + 50, ry + 25 + fBob, 14, 14);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(rx + 12, ry + 20 + fBob);
+        ctx.lineTo(rx + 32, ry + 27 + fBob);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(rx + 68, ry + 20 + fBob);
+        ctx.lineTo(rx + 48, ry + 27 + fBob);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // --- CLASS ITEM PICKUP ---
+    class Item {
+      constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.width = 24;
+        this.height = 24;
+        this.type = type;
+      }
+      draw(camX) {
+        let rx = this.x - camX;
+        let ry = this.y;
+        if (this.type === "Heal") {
+          ctx.fillStyle = "#00ff66";
+          ctx.fillRect(rx + 4, ry + 6, 16, 18);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(rx + 10, ry, 4, 6);
+        } else if (this.type === "Revive") {
+          ctx.fillStyle = "#ffd700";
+          ctx.beginPath();
+          ctx.arc(rx + 12, ry + 12, 11, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(rx + 9, ry + 9, 6, 6);
+        } else {
+          ctx.fillStyle = this.type === "Mace" ? "#ff6600" : "#e000e0";
+          ctx.fillRect(rx + 9, ry + 2, 6, 20);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(rx + 5, ry + 4, 14, 4);
+        }
+      }
+    }
+
+    // --- CLASS WORLD MAP GENERATOR ---
+    class WorldManager {
+      constructor() {
+        this.platforms = [];
+        this.enemies = [];
+        this.items = [];
+        this.boss = null;
+        this.chunk_width = 800;
+        this.furthest_x_generated = 0;
+        this.boss_arena_x = 10400;
+        this.in_castle = false;
+        this.generateChunk(0, true);
+      }
+
+      generateChunk(startX, isStart = false) {
+        if (startX >= this.boss_arena_x) {
+          if (!this.boss) {
+            this.platforms.push({
+              x: startX,
+              y: 530,
+              width: this.chunk_width * 2,
+              height: 70
+            });
+            this.platforms.push({
+              x: startX + this.chunk_width * 2 - 40,
+              y: 0,
+              width: 40,
+              height: 600
+            });
+
+            this.platforms.push({
+              x: startX + 100,
+              y: 430,
+              width: 160,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 340,
+              y: 350,
+              width: 160,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 580,
+              y: 430,
+              width: 160,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 220,
+              y: 250,
+              width: 180,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 500,
+              y: 250,
+              width: 180,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 380,
+              y: 140,
+              width: 140,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 780,
+              y: 340,
+              width: 160,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 960,
+              y: 230,
+              width: 160,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 1100,
+              y: 410,
+              width: 180,
+              height: 20
+            });
+
+            this.items.push(new Item(startX + 420, 90, "Heal"));
+            this.items.push(new Item(startX + 470, 90, "Revive"));
+
+            this.boss = new FinalBoss(startX + 650, 400);
+            this.furthest_x_generated = startX + (this.chunk_width * 2);
+          }
+          return;
+        }
+
+        if (isStart) {
+          this.platforms.push({
+            x: startX,
+            y: 530,
+            width: this.chunk_width,
+            height: 70
+          });
+          this.platforms.push({
+            x: startX + 420,
+            y: 420,
+            width: 180,
+            height: 20
+          });
+          this.items.push(new Item(startX + 460, 380, "Whip"));
+        } else {
+          let layouts = ["fight_zone", "cliff_jump", "double_deck"];
+          let rand_layout = layouts[Math.floor(Math.random() * layouts.length)];
+
+          if (rand_layout === "fight_zone") {
+            this.platforms.push({
+              x: startX,
+              y: 530,
+              width: this.chunk_width,
+              height: 70
+            });
+            this.platforms.push({
+              x: startX + 250,
+              y: 400,
+              width: 300,
+              height: 20
+            });
+            this.enemies.push(new Enemy(startX + 300, 480));
+            this.enemies.push(new Enemy(startX + 500, 480));
+            if (Math.random() < 0.4) this.items.push(new Item(startX + 380, 350, "Mace"));
+          } else if (rand_layout === "cliff_jump") {
+            this.platforms.push({
+              x: startX,
+              y: 530,
+              width: 240,
+              height: 70
+            });
+            this.platforms.push({
+              x: startX + 360,
+              y: 430,
+              width: 140,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 570,
+              y: 530,
+              width: 230,
+              height: 70
+            });
+            this.enemies.push(new Enemy(startX + 620, 480));
+            this.items.push(new Item(startX + 400, 380, "Heal"));
+          } else if (rand_layout === "double_deck") {
+            this.platforms.push({
+              x: startX,
+              y: 530,
+              width: this.chunk_width,
+              height: 70
+            });
+            this.platforms.push({
+              x: startX + 100,
+              y: 390,
+              width: 200,
+              height: 20
+            });
+            this.platforms.push({
+              x: startX + 450,
+              y: 390,
+              width: 200,
+              height: 20
+            });
+            this.enemies.push(new Enemy(startX + 180, 340));
+            if (Math.random() < 0.3) this.items.push(new Item(startX + 520, 340, "Revive"));
+          }
+        }
+        this.furthest_x_generated = startX + this.chunk_width;
+      }
+
+      update(camX) {
+        if (camX + SCREEN_WIDTH > this.furthest_x_generated - 300 && this.furthest_x_generated <= this.boss_arena_x + 200) {
+          this.generateChunk(this.furthest_x_generated);
+        }
+      }
+    }
+
+    // --- INITIALIZE ---
+    let world, player;
+
+    function resetFullGame() {
+      world = new WorldManager();
+      player = new Player(100, 400);
+      camera_x = 0;
+      boss_item_timer = 0;
+      game_state = "PLAYING";
+    }
+    world = new WorldManager();
+    player = new Player(100, 400);
+
+    // --- CORE ENGINE LOOP ---
+    function gameLoop() {
+      // --- UPDATE HANYA JALAN JIKA SEDANG PLAYING (AKAN FREEZE SAAT PAUSE) ---
+      if (game_state === "PLAYING") {
+        player.handleInput();
+        player.update(world.platforms, world.enemies, world.boss, world.items, world);
+        world.update(camera_x);
+
+        world.enemies.forEach(enemy => enemy.update(player, world.platforms));
+
+        if (!world.in_castle && player.x >= world.boss_arena_x) world.in_castle = true;
+
+        if (world.boss && world.in_castle) {
+          world.boss.update(player, world.platforms);
+          if (!world.boss.alive) game_state = "VICTORY";
+
+          boss_item_timer++;
+          if (boss_item_timer >= 600) {
+            boss_item_timer = 0;
+            let dropX = world.boss_arena_x + 150 + Math.random() * 900;
+            let dropY = 100 + Math.random() * 200;
+            let pools = ["Heal", "Whip", "Mace"];
+            let chosen = pools[Math.floor(Math.random() * pools.length)];
+            world.items.push(new Item(dropX, dropY, chosen));
+          }
+        }
+
+        let target_cam = player.x - (SCREEN_WIDTH / 2);
+        camera_x += (target_cam - camera_x) * 0.08;
+        camera_x = Math.max(0, camera_x);
+
+        if (world.in_castle) {
+          camera_x = Math.max(world.boss_arena_x, camera_x);
+          if (player.x < world.boss_arena_x) player.x = world.boss_arena_x;
+        }
+      }
+
+      // --- RENDER BACKGROUND ---
+      ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+      if (!world.in_castle) {
+        ctx.fillStyle = "#70bcff";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.fillStyle = "#ffffff";
+        for (let i = 0; i < 40; i++) {
+          let cx = (i * 350) - (camera_x * 0.15);
+          ctx.beginPath();
+          ctx.arc(cx + 40, 120, 20, 0, Math.PI * 2);
+          ctx.arc(cx + 65, 105, 26, 0, Math.PI * 2);
+          ctx.arc(cx + 90, 120, 20, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "#00a800";
+        for (let i = 0; i < 25; i++) {
+          let hx = (i * 500) - (camera_x * 0.4);
+          ctx.beginPath();
+          ctx.arc(hx + 250, 600, 160, 0, Math.PI, true);
+          ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = "#f8d878";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.strokeStyle = "#f8a400";
+        ctx.lineWidth = 2;
+        for (let y = 0; y < SCREEN_HEIGHT; y += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(SCREEN_WIDTH, y);
+          ctx.stroke();
+          let shift = (y % 80 === 0) ? 0 : 30;
+          for (let x = shift - (camera_x % 60); x < SCREEN_WIDTH + 60; x += 60) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + 40);
+            ctx.stroke();
+          }
+        }
+      }
+
+      if (!world.in_castle) {
+        ctx.fillStyle = "#b83418";
+        ctx.fillRect(world.boss_arena_x - camera_x, 0, 80, 530);
+        ctx.fillStyle = "#f8b8a8";
+        ctx.fillRect(world.boss_arena_x - camera_x + 15, 340, 50, 190);
+      }
+
+      // --- DRAW PLATFORMS ---
+      world.platforms.forEach(plat => {
+        let px = plat.x - camera_x;
+        ctx.fillStyle = "#c84c0c";
+        ctx.fillRect(px, plat.y, plat.width, plat.height);
+        ctx.fillStyle = "#00a800";
+        ctx.fillRect(px, plat.y, plat.width, 10);
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(px, plat.y, plat.width, plat.height);
+        for (let gx = 32; gx < plat.width; gx += 32) {
+          ctx.beginPath();
+          ctx.moveTo(px + gx, plat.y + 10);
+          ctx.lineTo(px + gx, plat.y + plat.height);
+          ctx.stroke();
+        }
+      });
+
+      world.items.forEach(item => item.draw(camera_x));
+      world.enemies.forEach(enemy => enemy.draw(camera_x));
+      if (world.boss && world.in_castle) world.boss.draw(camera_x);
+
+      player.draw(camera_x);
+
+      // --- DRAW HUD ---
+      if (game_state !== "START_MENU") {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(20, 20, 204, 22);
+        ctx.fillStyle = "#fcbcbc";
+        ctx.fillRect(22, 22, 200, 18);
+        ctx.fillStyle = "#e45c10";
+        ctx.fillRect(22, 22, (player.hp / player.max_hp) * 200, 18);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 12px monospace";
+        ctx.fillText(`HP: ${player.hp}/100`, 30, 35);
+
+        if (player.has_revive) {
+          ctx.fillStyle = "#ffd700";
+          ctx.beginPath();
+          ctx.arc(242, 31, 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(242, 31, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffd700";
+          ctx.font = "bold 12px monospace";
+          ctx.fillText("REVIVE READY", 258, 35);
+        } else {
+          ctx.fillStyle = "#555555";
+          ctx.font = "bold 12px monospace";
+          ctx.fillText("NO REVIVE", 242, 35);
+        }
+
+        ctx.fillStyle = "#000";
+        ctx.fillRect(20, 48, 204, 18);
+        ctx.fillStyle = "#3cbcfc";
+        ctx.fillRect(22, 50, 200, 14);
+        ctx.fillStyle = player.is_ult_active ? "#ffffff" : "#00f8f8";
+        ctx.fillRect(22, 50, (player.ult_bar / player.max_ult_bar) * 200, 14);
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 11px monospace";
+        let ult_status_txt = player.is_ult_active ? `LASER MODE: ${Math.ceil(player.ult_timer/60)}s` : (player.ult_bar >= 100 ? "ULT READY! [K]" : `CRYSTAL: ${Math.floor(player.ult_bar)}%`);
+        ctx.fillText(ult_status_txt, 28, 62);
+
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 13px monospace";
+        let current_wpn = player.is_ult_active ? "DEATH LASER" : player.weapon_type.toUpperCase();
+        ctx.fillText(`WEAPON: ${current_wpn}`, 22, 86);
+
+        if (world.boss && world.in_castle && world.boss.alive) {
+          let bx = (SCREEN_WIDTH / 2) - 250;
+          ctx.fillStyle = "#000";
+          ctx.fillRect(bx, SCREEN_HEIGHT - 50, 500, 20);
+          ctx.fillStyle = "#d82828";
+          ctx.fillRect(bx + 2, SCREEN_HEIGHT - 48, (world.boss.hp / world.boss.max_hp) * 496, 16);
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 13px monospace";
+          ctx.fillText("THE VOID KING (FINAL BOSS)", bx + 6, SCREEN_HEIGHT - 56);
+        }
+      }
+
+      // --- OVERLAYS (MENUS) ---
+      if (game_state === "START_MENU") {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.fillStyle = "#f8d878";
+        ctx.strokeStyle = "#c84c0c";
+        ctx.lineWidth = 6;
+        ctx.fillRect(150, 100, 500, 400);
+        ctx.strokeRect(150, 100, 500, 400);
+        ctx.fillStyle = "#b83418";
+        ctx.font = "bold 28px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Si Ucing", SCREEN_WIDTH / 2, 145);
+        ctx.strokeStyle = "#c84c0c";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(180, 165);
+        ctx.lineTo(620, 165);
+        ctx.stroke();
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 16px monospace";
+
+        let startY = 205;
+        let controls = [{
+            key: "⌨️ A / D",
+            desc: "-> Berjalan Kiri / Kanan"
+          },
+          {
+            key: "⌨️ W / SPACE",
+            desc: "-> Melompat Tinggi"
+          },
+          {
+            key: "⌨️ L-SHIFT",
+            desc: "-> Dash Cepat & Kebal"
+          },
+          {
+            key: "⌨️ TAHAN J",
+            desc: "-> Serang / Tembak MEGA LASER"
+          },
+          {
+            key: "⌨️ K",
+            desc: "-> AKTIFKAN ULTI (Saat Bar 100%)"
+          },
+          {
+            key: "⌨️ P",
+            desc: "-> PAUSE GAME (Bisa Quit/Restart)"
+          },
+          {
+            key: "⌨️ R",
+            desc: "-> Restart Game (Mati/Menang)"
+          }
+        ];
+        controls.forEach(c => {
+          ctx.fillStyle = "#b83418";
+          ctx.fillText(c.key, 180, startY);
+          ctx.fillStyle = "#000000";
+          ctx.fillText(c.desc, 310, startY);
+          startY += 32;
+        });
+        ctx.textAlign = "center";
+        ctx.font = "bold 15px sans-serif";
+        ctx.fillStyle = Math.floor(Date.now() / 400) % 2 === 0 ? "#00a800" : "#000";
+        ctx.fillText("TEKAN TOMBOL APAPUN UNTUK MEMULAI ADVENTURE", SCREEN_WIDTH / 2, 465);
+        ctx.textAlign = "left";
+
+      } else if (game_state === "PAUSED") {
+        // --- VIEW RENDER MENU PAUSE ---
+        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        ctx.fillStyle = "#f8d878";
+        ctx.strokeStyle = "#f8a400";
+        ctx.lineWidth = 4;
+        ctx.fillRect(220, 180, 360, 220);
+        ctx.strokeRect(220, 180, 360, 220);
+
+        ctx.fillStyle = "#b83418";
+        ctx.font = "bold 26px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME PAUSED", SCREEN_WIDTH / 2, 225);
+
+        // 1. Atur alignment dan style di awal agar konsisten
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 15px monospace";
+        ctx.textAlign = "center"; // Menggunakan 'center' karena kamu membagi SCREEN_WIDTH dengan 2
+
+        // 2. Render teks dengan jarak Y yang konsisten (masing-masing selisih 35px)
+        ctx.fillText("[P] Resume / Lanjut Main", SCREEN_WIDTH / 2, 280);
+        ctx.fillText("[R] Restart / Ulang Game", SCREEN_WIDTH / 2, 315);
+        ctx.fillText("[M] Main Menu / Keluar", SCREEN_WIDTH / 2, 350);
+        ctx.fillText("[S] Setting / Pengaturan", SCREEN_WIDTH / 2, 385);
+        ctx.textAlign = "left";
+
+      } else if (game_state === "GAME_OVER") {
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.fillStyle = "#fc9838";
+        ctx.font = "bold 48px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 20);
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px monospace";
+        ctx.fillText("Tekan 'R' Untuk Mencoba Kembali!", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+        ctx.textAlign = "left";
+      } else if (game_state === "VICTORY") {
+        ctx.fillStyle = "rgba(252,216,120,0.9)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.fillStyle = "#00a800";
+        ctx.font = "bold 48px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("THANK YOU NEKO!", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 20);
+        ctx.fillStyle = "#000";
+        ctx.font = "16px monospace";
+        ctx.fillText("Kastil Berhasil Diselamatkan! Tekan 'R' untuk Main Lagi", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+        ctx.textAlign = "left";
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+    requestAnimationFrame(gameLoop);
+  </script>
+
+</body>
+
+</html>

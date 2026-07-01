@@ -21,25 +21,29 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <div class="hidden md:flex items-center gap-sm">
             <?php if (isset($_SESSION['user'])): ?>
-                <div class="relative group">
-                    <button class="flex items-center gap-2 px-5 py-2 rounded-full hover:bg-surface-container-high">
+                <div class="relative">
+                    <button id="user-menu-button" class="flex items-center gap-2 px-5 py-2 rounded-full hover:bg-surface-container-high">
                         <span class="text-on-surface-variant">
                             Halo, <?php echo htmlspecialchars($_SESSION['user']['username']); ?>
                         </span>
-                        <svg class="w-4 h-4 text-on-surface-variant group-hover:rotate-180 transition-transform duration-300"
+                        <svg id="user-menu-arrow" class="w-4 h-4 text-on-surface-variant transition-transform duration-300"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                         <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($_SESSION['user']['username']); ?>"
                             class="w-8 h-8 rounded-full">
                     </button>
-                    <div class="absolute right-0 mt-2 w-56 bg-surface-container-high rounded-2xl shadow-xl border border-outline-variant overflow-hidden hidden group-hover:block transition-all duration-200 transform origin-top-right">
+                    <div id="user-dropdown" class="absolute right-0 mt-2 w-56 bg-surface-container-high rounded-2xl shadow-xl border border-outline-variant overflow-hidden hidden transition-all duration-200 transform origin-top-right">
                         <div class="px-4 py-3 border-b border-outline-variant">
                             <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold">Akun Saya</p>
                             <p class="text-sm font-medium text-on-surface truncate"><?php echo htmlspecialchars($_SESSION['user']['username']); ?></p>
                         </div>
                         <div class="py-1">
-                            <a href="koneksi/logout.php" class="flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container transition-colors">
+                            <a href="cetak-kartu.php" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-highest transition-colors">
+                                <span class="material-symbols-outlined text-[18px]">badge</span>
+                                Cetak Kartu
+                            </a>
+                            <a id="logoutBtn" href="koneksi/logout.php" class="flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                                 </svg>
@@ -49,7 +53,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     </div>
                 </div>
             <?php else: ?>
-                <!-- BELUM LOGIN -->
                 <a href="login.php" class="px-gutter py-2 rounded-full font-label-md text-label-md text-on-secondary-container hover:bg-primary-container transition-all">Login</a>
                 <a href="daftar.php" class="px-gutter py-2 rounded-full font-label-md text-label-md bg-primary text-on-primary shadow-md">Daftar</a>
             <?php endif; ?>
@@ -67,26 +70,42 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="about.php" class="block py-2 text-on-surface">Tentang Kami</a>
             <div class="pt-4 flex flex-col gap-2">
                 <?php if (isset($_SESSION['user'])): ?>
-                    <div class="flex items-center gap-2 mb-2">
-                        <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($_SESSION['user']['username']); ?>"
-                            class="w-8 h-8 rounded-full">
-                        <span>Halo, <?php echo $_SESSION['user']['username']; ?></span>
-                    </div>
-                    <a href="koneksi/logout.php" class="w-full py-2 text-center bg-red-500 text-white rounded-full">Logout</a>
+                    <a href="cetak-kartu.php" class="w-full py-2 text-center bg-blue-500 text-white rounded-full">Cetak Kartu</a>
+                    <a id="logoutBtn" href="koneksi/logout.php" class="w-full py-2 text-center bg-red-500 text-white rounded-full">Logout</a>
                 <?php else: ?>
                     <a href="login.php" class="w-full py-2 text-center border rounded-full">Login</a>
                     <a href="daftar.php" class="w-full py-2 text-center bg-primary text-on-primary rounded-full">Daftar</a>
                 <?php endif; ?>
-
             </div>
         </div>
     </div>
 </nav>
 <script>
+    // Toggle Mobile Menu
     const btn = document.getElementById('mobile-menu-button');
     const menu = document.getElementById('mobile-menu');
-
     btn.addEventListener('click', () => {
         menu.classList.toggle('hidden');
     });
+
+    // Toggle User Dropdown
+    const userBtn = document.getElementById('user-menu-button');
+    const userDrop = document.getElementById('user-dropdown');
+    const userArrow = document.getElementById('user-menu-arrow');
+
+    if (userBtn) {
+        userBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDrop.classList.toggle('hidden');
+            userArrow.classList.toggle('rotate-180');
+        });
+
+        // Klik di luar untuk menutup
+        document.addEventListener('click', (e) => {
+            if (!userDrop.contains(e.target) && !userBtn.contains(e.target)) {
+                userDrop.classList.add('hidden');
+                userArrow.classList.remove('rotate-180');
+            }
+        });
+    }
 </script>

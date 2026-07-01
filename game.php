@@ -71,10 +71,17 @@
                                 <?php echo $game['deskripsi']; ?>
                             </p>
                         </div>
-                        <a href="<?php echo $game['link']; ?>" class="w-full py-3 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md transition-all hover:bg-secondary-fixed-dim bouncy-press flex items-center justify-center gap-sm">
-                            Main Sekarang
-                            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                        </a>
+                        <?php if (isset($_SESSION['user'])): ?>
+                            <a href="<?php echo $game['link']; ?>" class="w-full py-3 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md transition-all hover:bg-secondary-fixed-dim bouncy-press flex items-center justify-center gap-sm">
+                                Main Sekarang
+                                <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                            </a>
+                        <?php else: ?>
+                            <a href="login.php" class="w-full py-3 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md transition-all hover:bg-secondary-fixed-dim bouncy-press flex items-center justify-center gap-sm">
+                                Login untuk Bermain
+                                <span class="material-symbols-outlined text-[18px]">lock</span>
+                            </a>
+                        <?php endif; ?>
                     </div>
             <?php
                 }

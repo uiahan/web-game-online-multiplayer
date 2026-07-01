@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html class="light" lang="id">
+
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -12,8 +13,10 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config" src="tailwind-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="css/login.css">
 </head>
+
 <body class="min-h-screen flex items-center justify-center p-gutter font-body-md text-on-background">
     <!-- Main Container -->
     <main class="w-full max-w-[900px] grid md:grid-cols-2 gap-lg items-center">
@@ -83,5 +86,39 @@
         <p class="font-label-sm text-label-sm text-outline opacity-60">© 2024 Ulinkeun Playroom. Dibuat dengan penuh keceriaan.</p>
     </div> -->
     <script src="js/login.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Mencegah reload halaman
+
+            let formData = new FormData(this);
+
+            fetch('koneksi/login.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: data.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = '/ulinkeun'; // Pindah setelah alert
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: data.message
+                        });
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
 </body>
+
 </html>

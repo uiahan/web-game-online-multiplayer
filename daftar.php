@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html class="light" lang="id">
+
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -14,6 +15,7 @@
     <script id="tailwind-config" src="tailwind-config.js"></script>
     <link rel="stylesheet" href="css/daftar.css">
 </head>
+
 <body class="font-body-md text-on-surface overflow-x-hidden">
     <!-- Top Navigation (Shell Rule: Suppressed for Transactional pages, but here we provide a minimal brand header) -->
     <header class="w-full py-6 px-gutter flex justify-center items-center">
@@ -84,7 +86,7 @@
                     </label>
                 </div> -->
                 <!-- Submit Button -->
-                <button class="w-full py-4 bg-primary text-white font-title-md text-title-md rounded-full bubbly-button hover:bg-primary/90 transition-all flex justify-center items-center gap-2" type="submit">
+                <button class="w-full button py-4 bg-primary text-white font-title-md text-title-md rounded-full bubbly-button hover:bg-primary/90 transition-all flex justify-center items-center gap-2" type="submit">
                     Daftar Sekarang
                     <span class="material-symbols-outlined">arrow_forward</span>
                 </button>
@@ -97,6 +99,41 @@
                 </p>
             </div>
         </div>
-    <script src="js/daftar.js"></script>
+        <script src="js/daftar.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+        <script>
+            document.getElementById('registerForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                let formData = new FormData(this);
+
+                fetch('koneksi/daftar.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Mantap!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.href = 'login.php'; // Pindah ke login setelah sukses
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal',
+                                text: data.message
+                            });
+                        }
+                    });
+            });
+        </script>
 </body>
+
 </html>

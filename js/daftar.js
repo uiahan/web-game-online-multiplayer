@@ -18,12 +18,3 @@ inputs.forEach((input) => {
       "'FILL' 0";
   });
 });
-
-// Form submission animation
-document.getElementById("registerForm").addEventListener("submit", (e) => {
-  const btn = e.target.querySelector("button");
-
-  btn.innerHTML =
-    '<span class="material-symbols-outlined animate-spin">refresh</span> Memproses...';
-  btn.disabled = true;
-});

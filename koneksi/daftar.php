@@ -1,8 +1,8 @@
 <?php
-
-
 session_start();
 include "config.php";
+
+header('Content-Type: application/json');
 
 $nama_lengkap = $_POST['nama_lengkap'] ?? '';
 $email = $_POST['email'] ?? '';
@@ -11,47 +11,39 @@ $password = $_POST['password'] ?? '';
 $confirm_password = $_POST['confirm_password'] ?? '';
 
 if (!$nama_lengkap || !$email || !$username || !$password) {
-    echo "❌ Semua field wajib diisi";
+    echo json_encode(["status" => "error", "message" => "Semua field wajib diisi"]);
     exit;
 }
 
 if ($password !== $confirm_password) {
-    echo "❌ Password tidak sama";
+    echo json_encode(["status" => "error", "message" => "Password tidak sama"]);
     exit;
 }
 
-$hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
+// Cek Username
 $checkUrl = $SUPABASE_URL . "/rest/v1/users?username=eq." . urlencode($username);
-
-$headers = [
-    "apikey: $SUPABASE_KEY",
-    "Authorization: Bearer $SUPABASE_KEY",
-    "Content-Type: application/json"
-];
+$headers = ["apikey: $SUPABASE_KEY", "Authorization: Bearer $SUPABASE_KEY", "Content-Type: application/json"];
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $checkUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
 $response = curl_exec($ch);
+$data = json_decode($response, true);
 curl_close($ch);
 
-$data = json_decode($response, true);
-
-if (count($data) > 0) {
-    echo "❌ Username sudah digunakan";
+if (!empty($data)) {
+    echo json_encode(["status" => "error", "message" => "Username sudah digunakan"]);
     exit;
 }
 
+// Insert User
 $insertUrl = $SUPABASE_URL . "/rest/v1/users";
-
 $newUser = [
     "nama_lengkap" => $nama_lengkap,
     "email" => $email,
     "username" => $username,
-    "password" => $hashed_password,
+    "password" => password_hash($password, PASSWORD_DEFAULT),
     "role" => "user"
 ];
 
@@ -61,20 +53,8 @@ curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($newUser));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
 $response = curl_exec($ch);
-
-if (curl_errno($ch)) {
-    echo "Error: " . curl_error($ch);
-    curl_close($ch);
-    exit;
-}
-
 curl_close($ch);
 
-$_SESSION['user'] = [
-    "username" => $username
-];
-
-header("Location: ../index.php");
-exit;
+echo json_encode(["status" => "success", "message" => "Pendaftaran berhasil!"]);
+?>  
