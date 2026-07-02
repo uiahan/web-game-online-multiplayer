@@ -70,8 +70,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="about.php" class="block py-2 text-on-surface">Tentang Kami</a>
             <div class="pt-4 flex flex-col gap-2">
                 <?php if (isset($_SESSION['user'])): ?>
-                    <a href="cetak-kartu.php" class="w-full py-2 text-center bg-blue-500 text-white rounded-full">Cetak Kartu</a>
-                    <a id="logoutBtn" href="koneksi/logout.php" class="w-full py-2 text-center bg-red-500 text-white rounded-full">Logout</a>
+                    <a href="cetak-kartu.php" class="w-full py-2 text-center border rounded-full">Cetak Kartu</a>
+                    <a id="logoutBtn" href="koneksi/logout.php" class="w-full py-2 text-center bg-primary text-on-primary rounded-full">Logout</a>
                 <?php else: ?>
                     <a href="login.php" class="w-full py-2 text-center border rounded-full">Login</a>
                     <a href="daftar.php" class="w-full py-2 text-center bg-primary text-on-primary rounded-full">Daftar</a>

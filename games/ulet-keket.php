@@ -13,7 +13,7 @@ if (!isset($_SESSION['user'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NeonWorm.io: Ultimate Arcade ✨</title>
+    <title>Ulet Keket</title>
     <style>
       /* --- RESET & BASIC STYLES --- */
       * {
@@ -184,7 +184,7 @@ if (!isset($_SESSION['user'])) {
 
       <div id="start-screen" class="screen-overlay">
         <div class="menu-box">
-          <h1>NeonWorm.io</h1>
+          <h1>Ulet Keket</h1>
           <p class="rules">
             Gerakkan kursor atau sentuh layar untuk mengarahkan cacing. Makan
             partikel cahaya sebanyak-banyaknya dan jangan biarkan kepala

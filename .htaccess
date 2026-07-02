@@ -1,6 +1,6 @@
 RewriteEngine On
 
-RewriteBase /ulinkeun/
+RewriteBase /https://ulinkeun.site.je/
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

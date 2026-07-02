@@ -1,6 +1,6 @@
 <?php
 $request = $_SERVER['REQUEST_URI'];
-$base = '/ulinkeun';
+$base = '';
 $path = str_replace($base, '', $request);
 
 // daftar halaman yang valid

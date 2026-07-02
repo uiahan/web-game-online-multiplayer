@@ -259,7 +259,7 @@ if (!isset($_SESSION['user'])) {
       ✕
     </button>
     <div class="game-wrapper">
-      <h1>Mystic Slide</h1>
+      <h1>Slide Puzzle</h1>
       <p class="subtitle">Urutkan angka sampai menjadi sempurna ✨</p>
 
       <!-- Stats Bar -->

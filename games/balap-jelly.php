@@ -13,7 +13,7 @@ if (!isset($_SESSION['user'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cozy Jelly Drift! 🏎️🍮</title>
+    <title>Balap Jelly</title>
     <style>
       /* --- TEMA UI RETRO PASTEL ESTETIK --- */
       :root {
@@ -199,7 +199,7 @@ if (!isset($_SESSION['user'])) {
       ✕
     </button>
     <header>
-      <h1>JELLY DRIFT COZY</h1>
+      <h1>BALAP JELLY</h1>
       <p>
         Gunakan tombol arah KANAN / KIRI / ATAS / BAWAH ( ◀ ▶ ▲ ▼ ) untuk
         mengendalikan mobil!

@@ -13,7 +13,7 @@ if (!isset($_SESSION['user'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Whack-a-Mole Neon Arcade 🎮🐭</title>
+    <title>Pukul Koruptor</title>
     <style>
       /* --- DESAIN UI & TEMA ESTETIK NEON --- */
       :root {
@@ -237,9 +237,9 @@ if (!isset($_SESSION['user'])) {
       ✕
     </button>
     <header>
-      <h1>NEON WHACK-A-MOLE</h1>
+      <h1>PUKUL KORUPTOR</h1>
       <p>
-        Lebih santai! Cukup klik area lubang saat tikus muncul untuk cetak poin!
+        Lebih santai! Cukup klik area lubang saat koruptor muncul untuk cetak poin!
       </p>
     </header>
 

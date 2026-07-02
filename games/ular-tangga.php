@@ -13,7 +13,7 @@ if (!isset($_SESSION['user'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ular Tangga Aesthetic</title>
+    <title>Ular Tangga</title>
     <style>
       :root {
         --bg-color: #f0f4f8;

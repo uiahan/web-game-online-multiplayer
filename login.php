@@ -106,7 +106,7 @@
                             timer: 1500,
                             showConfirmButton: false
                         }).then(() => {
-                            window.location.href = '/ulinkeun'; // Pindah setelah alert
+                            window.location.href = '/'; // Pindah setelah alert
                         });
                     } else {
                         Swal.fire({
